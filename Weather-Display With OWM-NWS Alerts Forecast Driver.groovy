@@ -1,6 +1,6 @@
 /*
   Weather-Display With OWM-NWS Alerts Forecast Driver
-   Import URL: https://raw.githubusercontent.com/HubitatCommunity/Weather-Display With OWN-NWS Alerts Forecast Driver/master/Weather-Display%20With%20OWN-NWS%20Alerts%20Forecast%20Driver.groovy
+   Import URL: https://raw.githubusercontent.com/HubitatCommunity/Weather-Display-With-OWM-NWS-Alerts-Forecast-Driver/master/Weather-Display%20With%20OWM-NWS%20Alerts%20Forecast%20Driver.groovy
    Copyright 2020 @Matthew (Scottma61)
 
    This driver has morphed many, many times, so the genesis is very blurry now.  It stated as a WeatherUnderground
@@ -100,7 +100,7 @@ metadata {
 	definition (name: 'Weather-Display With OWM-NWS Alerts Forecast Driver',
 		namespace: 'Matthew',
 		author: 'Scottma61',
-		importUrl: 'https://raw.githubusercontent.com/HubitatCommunity/Weather-Display With OWN-NWS Alerts Forecast Driver/master/Weather-Display%20With%20OWN-NWS%20Alerts%20Forecast%20Driver.groovy') {
+		importUrl: 'https://raw.githubusercontent.com/HubitatCommunity/Weather-Display-With-OWM-NWS-Alerts-Forecast-Driver/master/Weather-Display%20With%20OWM-NWS%20Alerts%20Forecast%20Driver.groovy') {
         capability 'Sensor'
         capability 'Temperature Measurement'
         capability 'Illuminance Measurement'
@@ -716,10 +716,10 @@ void pollOWMHandler(resp, data) {
 // >>>>>>>>>> End Process Only If Wind from WD Is NOT Selected <<<<<<<<<<
 // >>>>>>>>>> End Setup Forecast Variables <<<<<<<<<<
 
-// <<<<<<<<<< Begin Process Only If Illumination from WD Is NOT Selected  >>>>>>>>>>
-	if(sourceIllumination==false) {
+//<<<<<<<<< Begin Process Only If Illumination from WD Is NOT Selected  >>>>>>>>>>
+//f(sourceIllumination==false) {
 		updateLux(false)
-	}
+//
 // >>>>>>>>>> End Process Only If Illumination from WD Is NOT Selected  <<<<<<<<<<
 
 // <<<<<<<<<< Begin Process Only If Ultraviolet Index from WD Is NOT Selected  >>>>>>>>>>                    
@@ -826,12 +826,13 @@ void updateLux(Boolean pollAgain=true) {
 	}
 	if(extSource.toInteger()==1 || sourceIllumination == true){
 		def (holdlux, bwn) = estimateLux(getDataValue('condition_id').toInteger(), getDataValue('cloud').toInteger())
+        LOGINFO('updateLux Results: holdlux: ' + holdlux + '; bwn: ' + bwn)
 	} else {
-    def (lux, bwn) = estimateLux(getDataValue('condition_id').toInteger(), getDataValue('cloud').toInteger())
+        def (lux, bwn) = estimateLux(getDataValue('condition_id').toInteger(), getDataValue('cloud').toInteger())
         updateDataValue('illuminance', !lux ? '0' : lux.toString())
         updateDataValue('illuminated', String.format('%,4d', !lux ? 0 : lux).toString())
+        LOGINFO('updateLux Results: lux: ' + holdlux + '; bwn: ' + bwn)
 	}
-	updateDataValue('bwn', bwn)
 	if(pollAgain) PostPoll()
     return
 }
@@ -1408,7 +1409,7 @@ def estimateLux(Integer condition_id, Integer cloud)     {
 	Long lux = 0L
 	Boolean aFCC = true
 	Double l
-	String bwn
+	String sod
 	def sunRiseSet            = parseJson(getDataValue('sunRiseSet')).results
 	def tZ                    = TimeZone.getDefault() //TimeZone.getTimeZone(tz_id)
 	String lT                 = new Date().format('yyyy-MM-dd\'T\'HH:mm:ssXXX', tZ)
@@ -1426,61 +1427,62 @@ def estimateLux(Integer condition_id, Integer cloud)     {
 
 	switch(localeMillis) { 
 		case { it < twilight_beginMillis}: 
-			bwn = 'Fully Night Time'
+			sod = 'Fully Night Time'
 			lux = 5l
             aFCC = false
 			break
 		case { it < sunriseTimeMillis}:
-			bwn = 'between twilight and sunrise'
+			sod = 'between twilight and sunrise'
 			l = (((localeMillis - twilight_beginMillis) * 50f) / (sunriseTimeMillis - twilight_beginMillis))
 			lux = (l < 10f ? 10l : l.trunc(0) as Long)
 			break
 		case { it < noonTimeMillis}:
-			bwn = 'between sunrise and noon'
+			sod = 'between sunrise and noon'
 			l = (((localeMillis - sunriseTimeMillis) * 10000f) / (noonTimeMillis - sunriseTimeMillis))
 			lux = (l < 50f ? 50l : l.trunc(0) as Long)
 			break
 		case { it < sunsetTimeMillis}:
-			bwn = 'between noon and sunset'
+			sod = 'between noon and sunset'
 			l = (((sunsetTimeMillis - localeMillis) * 10000f) / (sunsetTimeMillis - noonTimeMillis))
 			lux = (l < 50f ? 50l : l.trunc(0) as Long)
 			break
 		case { it < twilight_endMillis}:
-			bwn = 'between sunset and twilight'
+			sod = 'between sunset and twilight'
 			l = (((twilight_endMillis - localeMillis) * 50f) / (twilight_endMillis - sunsetTimeMillis))
 			lux = (l < 10f ? 10l : l.trunc(0) as Long)
 			break
 		case { it < twiStartNextMillis}:
-			bwn = 'Fully Night Time'
+			sod = 'Fully Night Time'
 			lux = 5l
             aFCC = false
 			break
 		case { it < sunriseNextMillis}:
-			bwn = 'between twilight and sunrise'
+			sod = 'between twilight and sunrise'
 			l = (((localeMillis - twiStartNextMillis) * 50f) / (sunriseNextMillis - twiStartNextMillis))
 			lux = (l < 10f ? 10l : l.trunc(0) as Long)
 			break
 		case { it < noonTimeNextMillis}:
-			bwn = 'between sunrise and noon'
+			sod = 'between sunrise and noon'
 			l = (((localeMillis - sunriseNextMillis) * 10000f) / (noonTimeNextMillis - sunriseNextMillis))
 			lux = (l < 50f ? 50l : l.trunc(0) as Long)
 			break
 		case { it < sunsetNextMillis}:
-			bwn = 'between noon and sunset'
+			sod = 'between noon and sunset'
 			l = (((sunsetNextMillis - localeMillis) * 10000f) / (sunsetNextMillis - noonTimeNextMillis))
 			lux = (l < 50f ? 50l : l.trunc(0) as Long)
 			break
 		case { it < twiEndNextMillis}:
-			bwn = 'between sunset and twilight'
+			sod = 'between sunset and twilight'
 			l = (((twiEndNextMillis - localeMillis) * 50f) / (twiEndNextMillis - sunsetNextMillis))
 			lux = (l < 10f ? 10l : l.trunc(0) as Long)
 			break
 		default:
-			bwn = 'Fully Night Time'
+			sod = 'Fully Night Time'
 			lux = 5l
             aFCC = false
 			break
 	}
+    updateDataValue('bwn', sod)
     String cC = condition_id.toString()
 	String cCT = ' using cloud cover from API'
     Double cCF = (!cloud || cloud=='') ? 0.998d : (1 - (cloud/100 / 3d))
@@ -1510,8 +1512,8 @@ def estimateLux(Integer condition_id, Integer cloud)     {
         }
     }
     lux = Math.max(lux, 5)
-	LOGINFO('estimateLux results: condition: ' + cC + ' | condition factor: ' + cCF + ' | condition text: ' + cCT + '| lux: ' + lux)
-	return [lux, bwn]
+	LOGINFO('estimateLux results: condition: ' + cC + ' | condition factor: ' + cCF + ' | condition text: ' + cCT + '| lux: ' + lux + ' | sod: ' + sod)
+	return [lux, sod]
 }
 
 public Long getEpoch (String aTime) {
