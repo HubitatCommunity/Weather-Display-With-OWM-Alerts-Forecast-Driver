@@ -98,9 +98,9 @@ import groovy.transform.Field
 
 metadata {
 	definition (name: 'Weather-Display With OWM-NWS Alerts Forecast Driver',
-		namespace: "Matthew",
+		namespace: 'Matthew',
 		author: 'Scottma61',
-		importUrl: "https://raw.githubusercontent.com/HubitatCommunity/Weather-Display With OWN-NWS Alerts Forecast Driver/master/Weather-Display%20With%20OWN-NWS%20Alerts%20Forecast%20Driver.groovy") {
+		importUrl: 'https://raw.githubusercontent.com/HubitatCommunity/Weather-Display With OWN-NWS Alerts Forecast Driver/master/Weather-Display%20With%20OWN-NWS%20Alerts%20Forecast%20Driver.groovy') {
         capability 'Sensor'
         capability 'Temperature Measurement'
         capability 'Illuminance Measurement'
