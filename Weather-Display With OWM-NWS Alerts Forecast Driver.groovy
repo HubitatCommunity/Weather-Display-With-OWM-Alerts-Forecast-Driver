@@ -60,7 +60,7 @@
 	Last Update 05/07/2020
 	{ Left room below to document version changes...}
 
-   V0.0.5   Improved Alert handeling for dashboard tiles, various bug fixes                                     - 05/07/2020
+   V0.0.5   Improved Alert handling for dashboard tiles, various bug fixes                                     - 05/07/2020
    V0.0.4   Corrected update time on dashboard tile attributes                                                  - 04/24/2020-2
    V0.0.3   Continue to work on improving null handling, various bug fixes                                      - 04/24/2020
    V0.0.2   Numerous bug fixes, checking for null and scheduling corrections.                                   - 04/23/2020
