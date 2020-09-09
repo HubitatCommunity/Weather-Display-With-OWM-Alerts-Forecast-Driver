@@ -61,6 +61,7 @@
 	Last Update 09/08/2020
 	{ Left room below to document version changes...}
 
+   V0.0.9   Restoring 'certainty' to the weather.gov alert poll                                                   - 09/08/2020   
    V0.0.8   Removed 'certainty' from weather.gov alert poll                                                     - 09/08/2020   
    V0.0.7   Bug fix for NullPointerException on line 848                                                        - 09/07/2020
    V0.0.6   Improved Alert handling for dashboard tiles, again, various bug fixes                               - 09/05/2020
@@ -83,7 +84,7 @@ The way the 'optional' attributes work:
 	available in the dashboard is to delete the virtual device and create a new one AND DO NOT SELECT the
 	attribute you do not want to show.
 */
-public static String version()      {  return '0.0.8'  }
+public static String version()      {  return '0.0.9'  }
 import groovy.transform.Field
 
 metadata {
@@ -759,16 +760,16 @@ void pollAlerts() {
     if(getDataValue('alertFails')==null) {updateDataValue('alertFails','0')}
     Integer pollTimeout = settings.pollIntervalStation == '1 Minute' ? 15 : 30
     def ParamsAlerts
-    ParamsAlerts = [ uri: 'https://api.weather.gov/alerts/active?status=actual&message_type=alert,update&point=' + altLat + ',' + altLon +'&urgency=unknown,future,expected,immediate&severity=unknown,moderate,severe,extreme', //&certainty=unknown,possible,likely,observed',
-			requestContentType: "application/json",
-			contentType: "application/json",
-            timeout: pollTimeout,
-			]
+    ParamsAlerts = [ uri: 'https://api.weather.gov/alerts/active?status=actual&message_type=alert,update&point=' + altLat + ',' + altLon + '&urgency=unknown,future,expected,immediate&severity=unknown,moderate,severe,extreme&certainty=unknown,possible,likely,observed',
+                    requestContentType:'application/json',
+                    contentType:'application/json',
+                    timeout: pollTimeout
+                   ]
     LOGINFO('Poll api.weather.gov/alerts/active: ' + ParamsAlerts)
 
     try {
         httpGet(ParamsAlerts) { NWSAlert ->
-		    LOGINFO('766 - NWS Alert - response: ' + NWSAlert.status + '; Alert: ' + NWSAlert.data.features[0].properties.event.replaceAll('[{}\\[\\]]', '').split(/,/)[0])
+		    LOGINFO('NWS Alert - response: ' + NWSAlert.status + '; Alert: ' + NWSAlert.data.features[0].properties.event.replaceAll('[{}\\[\\]]', '').split(/,/)[0])
             if(NWSAlert.status == 200) {
                 updateDataValue('alertFails', '0')
                 try {
