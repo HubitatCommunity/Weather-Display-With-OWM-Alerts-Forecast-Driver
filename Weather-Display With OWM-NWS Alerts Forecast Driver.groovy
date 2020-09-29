@@ -44,9 +44,10 @@
    on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
    for the specific language governing permissions and limitations under the License.
 
-	Last Update 09/27/2020
+	Last Update 09/29/2020
   { Left room below to document version changes...}
 
+	V0.2.5	09/29/2020	Added option to retrieve hourly temperature and probability of precipitation for the next 2 hours (by @dsegall)
 	V0.2.4	09/24/2020	Fix to allow for use of multiple virtual devices, More string constant optimizations (by @nh.schottfam)
 	V0.2.3	09/24/2020	More string constant optimizations, and removal of white space characters (by @nh.schottfam)
 	V0.2.2	09/23/2020	Removing 'urgency' restrictions from alerts poll
