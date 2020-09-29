@@ -86,7 +86,7 @@ The way the 'optional' attributes work:
    available in the dashboard is to delete the virtual device and create a new one AND DO NOT SELECT the
    attribute you do not want to show.
 */
-public static String version()      {  return '0.2.4'  }
+public static String version()      {  return '0.2.5'  }
 import groovy.transform.Field
 
 metadata {
