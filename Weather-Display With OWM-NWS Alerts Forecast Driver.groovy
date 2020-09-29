@@ -279,7 +279,7 @@ void pollOWM() {
         return
     }
     def ParamsOWM
-    ParamsOWM = [ uri: 'https://api.openweathermap.org/data/2.5/onecall?lat=' + altLat + '&lon=' + altLon + '&exclude=minutely&mode=json&units=imperial&appid=' + apiKey ]
+    ParamsOWM = [ uri: 'https://api.openweathermap.org/data/2.5/onecall?lat=' + altLat + '&lon=' + altLon + '&exclude=minutely' + (hourlyPublish ? '' : ',hourly') + '&mode=json&units=imperial&appid=' + apiKey ]
     LOGINFO('Poll OpenWeatherMap.org: ' + ParamsOWM)
     asynchttpGet('pollOWMHandler', ParamsOWM)
 }
@@ -288,7 +288,7 @@ void pollOWMHandler(resp, data) {
     if(ifreInstalled()) { updated(); return }
     LOGINFO('Polling OpenWeatherMap.org')
     if(resp.getStatus() != 200 && resp.getStatus() != 207) {
-        LOGWARN('Calling https://api.openweathermap.org/data/2.5/onecall?lat=' + altLat + '&lon=' + altLon + '&exclude=minutely&mode=json&units=imperial&appid=' + apiKey)
+        LOGWARN('Calling https://api.openweathermap.org/data/2.5/onecall?lat=' + altLat + '&lon=' + altLon + '&exclude=minutely' + (hourlyPublish ? '' : ',hourly') + '&mode=json&units=imperial&appid=' + apiKey)
         LOGWARN(resp.getStatus() + sCOLON + resp.getErrorMessage())
 	} else {
         def owm = parseJson(resp.data)
@@ -849,10 +849,13 @@ void PostPoll() {
 	sendEvent(name: sTEMP, value: myGetData(sTEMP).toBigDecimal(), unit: myGetData(sTMETR))
     sendEvent(name: 'ultravioletIndex', value: myGetData('ultravioletIndex').toBigDecimal(), unit: 'uvi')
     sendEvent(name: 'feelsLike', value: myGetData('feelsLike').toBigDecimal(), unit: myGetData(sTMETR))
-    sendEvent(name: 'temp1hr', value: myGetData('temp1hr').toBigDecimal(), unit: myGetData(sTMETR))
-    sendEvent(name: 'temp2hr', value: myGetData('temp2hr').toBigDecimal(), unit: myGetData(sTMETR))
-    sendEvent(name: 'pop1hr', value: myGetData('pop1hr').toBigDecimal(), unit: '%')
-    sendEvent(name: 'pop2hr', value: myGetData('pop2hr').toBigDecimal(), unit: '%')
+    
+    if (hourlyPublish) {
+        sendEvent(name: 'temp1hr', value: myGetData('temp1hr').toBigDecimal(), unit: myGetData(sTMETR))
+        sendEvent(name: 'temp2hr', value: myGetData('temp2hr').toBigDecimal(), unit: myGetData(sTMETR))
+        sendEvent(name: 'pop1hr', value: myGetData('pop1hr').toBigDecimal(), unit: '%')
+        sendEvent(name: 'pop2hr', value: myGetData('pop2hr').toBigDecimal(), unit: '%')
+    }
 
 /*  'Required for Dashboards' Data Elements */
     if(dashHubitatOWMPublish || dashSharpToolsPublish || dashSmartTilesPublish) { sendEvent(name: 'city', value: myGetData('city')) }
@@ -1639,6 +1642,7 @@ void sendEventPublish(evt)	{
 	'dewpoint':					[title: 'Dewpoint (in default unit)', d: 'Display the dewpoint?', ty: 'number', default: sFLS],
 	'fcstHighLow':				[title: 'Forecast High/Low Temperatures:', d: 'Display forecast High/Low temperatures?', ty: false, default: sFLS],
 	'forecast_code':			[title: 'Forecast Code', d: 'Display forecast_code?', ty: 'string', default: sFLS],
+    'hourly':					[title: 'Hourly', d: 'Display 2-hour temperature and precipitation?', ty: false, default: sFLS],
 	'forecast_text':			[title: 'Forecast Text', d: 'Display forecast_text?', ty: 'string', default: sFLS],
 	'illuminated':				[title: 'Illuminated', d: 'Display illuminated (with lux added for use on a Dashboard)?', ty: 'string', default: sFLS],
 	'is_day':					[title: 'Is daytime', d: 'Display is_day?', ty: 'number', default: sFLS],
