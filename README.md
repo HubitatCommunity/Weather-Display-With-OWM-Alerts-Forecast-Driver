@@ -1,4 +1,4 @@
-Weather-Display-With-OWM-NWS-Alerts-Forecast-Driver
+Weather-Display-With-OWM-Alerts-Forecast-Driver
 
 <a href="https://github.com/HubitatCommunity/Weather-Display-With-OWM-NWS-Alerts-Forecast-Driver/wiki">Wiki</a>
 
