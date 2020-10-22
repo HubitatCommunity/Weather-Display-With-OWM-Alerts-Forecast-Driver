@@ -2014,7 +2014,6 @@ void sendEventPublish(evt)	{
 	'wind_gust':				[title: 'Wind gust (in default unit)', d: 'Display the Wind Gust?', ty: 'number', default: sFLS],
 	'wind_string':				[title: 'Wind string', d: 'Display the wind string?', ty: 'string', default: sFLS],
 ]
-	state.InternalName = 'Weather-Display With OWM-NWS Alerts Forecast Driver'
 // Check Version   ***** with great thanks and acknowledgment to Cobra (CobraVmax) for his original code ****
 void updateCheck()
 {
@@ -2025,7 +2024,7 @@ void updateCheck()
 
 void updateCheckHandler(resp, data) {
 
-	state.InternalName = 'OpenWeatherMap-NWS Alerts Weather Driver'
+	state.InternalName = 'Weather-Display With OWM-NWS Alerts Forecast Driver'
 	Boolean descTextEnable = settings.logSet ?: false
 
 	if (resp.getStatus() == 200 || resp.getStatus() == 207) {
