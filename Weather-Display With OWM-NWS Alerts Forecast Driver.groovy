@@ -1,6 +1,6 @@
 /*
-	Weather-Display With OWM-NWS Alerts Forecast Driver
-	Import URL: https://raw.githubusercontent.com/HubitatCommunity/Weather-Display-With-OWM-NWS-Alerts-Forecast-Driver/master/Weather-Display%20With%20OWM-NWS%20Alerts%20Forecast%20Driver.groovy
+	Weather-Display With OWM-Alerts Forecast Driver
+	Import URL: https://raw.githubusercontent.com/HubitatCommunity/Weather-Display-With-OWM-Alerts-Forecast-Driver/master/Weather-Display%20With%20OWM-NWS%20Alerts%20Forecast%20Driver.groovy
 	Copyright 2020 @Matthew (Scottma61)
 
 	This driver has morphed many, many times, so the genesis is very blurry now.  It stated as a WeatherUnderground
@@ -104,10 +104,10 @@ public static String version()	  {  return '0.2.5'  }
 import groovy.transform.Field
 
 metadata {
-	definition (name: 'Weather-Display With OWM-NWS Alerts Forecast Driver',
+	definition (name: 'Weather-Display With OWM-Alerts Forecast Driver',
 		namespace: 'Matthew',
 		author: 'Scottma61',
-		importUrl: 'https://raw.githubusercontent.com/HubitatCommunity/Weather-Display-With-OWM-NWS-Alerts-Forecast-Driver/master/Weather-Display%20With%20OWM-NWS%20Alerts%20Forecast%20Driver.groovy') {
+		importUrl: 'https://raw.githubusercontent.com/HubitatCommunity/Weather-Display-With-OWM-Alerts-Forecast-Driver/master/Weather-Display%20With%20OWM-NWS%20Alerts%20Forecast%20Driver.groovy') {
 		capability 'Sensor'
 		capability 'Temperature Measurement'
 		capability 'Illuminance Measurement'
@@ -2024,7 +2024,7 @@ void updateCheck()
 
 void updateCheckHandler(resp, data) {
 
-	state.InternalName = 'Weather-Display With OWM-NWS Alerts Forecast Driver'
+	state.InternalName = 'Weather-Display With OWM-Alerts Forecast Driver'
 	Boolean descTextEnable = settings.logSet ?: false
 
 	if (resp.getStatus() == 200 || resp.getStatus() == 207) {
