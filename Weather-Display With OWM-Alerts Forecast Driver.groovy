@@ -296,6 +296,7 @@ void sunRiseSetHandler(resp, data) {
 		if(myGetData('sunRiseSet')==sNULL) {
 			pauseExecution(1000)
 			pollSunRiseSet()
+			return
 		}
 		String tfmt='yyyy-MM-dd\'T\'HH:mm:ssXXX'
 		String tfmt1='HH:mm'
@@ -621,6 +622,7 @@ void pollOWMHandler(resp, data) {
 		if(owm.toString()==sNULL) {
 			pauseExecution(1000)
 			pollOWM()
+			return
 		}
 // <<<<<<<<<< Begin Setup Global Variables >>>>>>>>>>
 		Date fotime = new Date((Long)owm.current.dt * 1000L)
@@ -867,7 +869,7 @@ void pollOWMHandler(resp, data) {
 					clearAlerts()
 				}else{
 					Integer alertCnt = 0
-					for(int i = 1;i<10;i++) {
+					for(Integer i = 1;i<10;i++) {
 						if(owm?.alerts[i]?.event!=null) {
 							alertCnt = i
 						}
@@ -1200,7 +1202,7 @@ void PostPoll() {
 		String mtprecip
 		if(extSource.toInteger() == 2){
 			Summary_forecastTemp = ' with a high of ' + String.format(myGetData('ddisp_twd'), myGetData('forecastHigh').toBigDecimal()) + myGetData(sTMETR) + ' and a low of ' + String.format(myGetData('ddisp_twd'), myGetData('forecastLow').toBigDecimal()) + myGetData(sTMETR) + '. '
-			Summary_precip = 'There has been ' + (myGetData('rainToday').toBigDecimal() > 0 ? String.format(myGetData('ddisp_r'), myGetData('rainToday').toBigDecimal()) + (myGetData(sRMETR) == 'in' ? ' inches' : ' millimeters') + ' of ' : ' no ') + 'precipitation today. '
+			Summary_precip = 'There has been ' + (myGetData('rainToday')==sNULL ? 0 : myGetData('rainToday').toBigDecimal() > 0 ? String.format(myGetData('ddisp_r'), myGetData('rainToday').toBigDecimal()) + (myGetData(sRMETR) == 'in' ? ' inches' : ' millimeters') + ' of ' : ' no ') + 'precipitation today. '
 			Summary_vis = 'Visibility is around ' + String.format(myGetData('ddisp_twd'), myGetData('vis').toBigDecimal()) + (myGetData(sDMETR)=='MPH' ? ' miles.' : ' kilometers.')
 			mtprecip = myGetData('percentPrecip') + '%'
 		}else{
@@ -1521,6 +1523,7 @@ void pollOWMlHandler(resp, data) {
 		if(owml.toString()==sNULL) {
 			pauseExecution(1000)
 			pollOWMl()
+			return
 		}
 		LOGINFO('OpenWeatherMap Location Data: ' + owml.toString())
 		myUpdData('OWML',(owml?.list[0]?.id==null ? sSPC : owml?.list[0]?.id.toString()))
