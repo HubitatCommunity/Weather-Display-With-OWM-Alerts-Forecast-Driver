@@ -58,9 +58,10 @@
 	on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 	for the specific language governing permissions and limitations under the License.
 
-	Last Update 10/30/2020
+	Last Update 10/31/2020
 { Left room below to document version changes...}
 
+	V0.4.0	10/31/2020	Tweaked threedayfcstTile for small screens.
 	V0.3.9	10/30/2020	More code cleanups/reductions/optimizations by @nh.schottfam.
 	V0.3.8	10/29/2020	Bug fixes and the usual code cleanup/reduction/optimizations by @nh.schottfam.
 	V0.3.7	10/29/2020	Yet another Precip bux fix.
@@ -114,7 +115,7 @@ The way the 'optional' attributes work:
 	available in the dashboard is to delete the virtual device and create a new one AND DO NOT SELECT the
 	attribute you do not want to show.
 */
-static String version()	{  return '0.3.9'  }
+static String version()	{  return '0.4.0'  }
 import groovy.transform.Field
 
 metadata {
@@ -354,7 +355,6 @@ void pollWDHandler(resp, data) {
 	}else{
 		LOGWARN('Weather-Display API did not return data')
 	}
-//	return
 }
 
 void doPollWD(Map wd) {
@@ -384,8 +384,6 @@ void doPollWD(Map wd) {
 	Integer mult_p = myGetData('mult_p')==sNULL ? 1 : myGetData('mult_p').toInteger()
 	Integer mult_r = myGetData('mult_r')==sNULL ? 1 : myGetData('mult_r').toInteger()
 	String ddisp_twd = myGetData('ddisp_twd')==sNULL ? '%3.0f' : myGetData('ddisp_twd')
-//	String ddisp_p = myGetData('ddisp_p')==sNULL ? '%4.0f' : myGetData('ddisp_p')
-//	String ddisp_r = myGetData('ddisp_r')==sNULL ? '%2.0f' : myGetData('ddisp_r')
 	Boolean isF = myGetData(sTMETR) == sDF
 // >>>>>>>>>> End Setup Global Variables <<<<<<<<<<  
 
@@ -1263,13 +1261,13 @@ void PostPoll() {
 		my3day += '</style>'
 		my3day += '<table align="center">'
 		my3day += '<tr>'
-		my3day += sTD + sTDE
+		my3day += sTD + '<B>' + myGetData('city') +'</B>' + sTDE
 		my3day += sTD + 'Today' + sTDE
 		my3day += sTD + myGetData('day1') + sTDE
 		my3day += sTD + myGetData('day2') + sTDE
 		my3day += '</tr>'
 		my3day += '<tr>'
-		my3day += sTD + 'Now:' + String.format(ddisp_twd, myGetData(sTEMP).toBigDecimal()) + myGetData(sTMETR) + sBR + 'Feels:' + String.format(ddisp_twd, myGetData('feelsLike').toBigDecimal()) + myGetData(sTMETR) + sTDE
+		my3day += sTD+'Now' + String.format(ddisp_twd, myGetData(sTEMP).toBigDecimal()) + myGetData(sTMETR) + sBR + 'Feels' + String.format(ddisp_twd, myGetData('feelsLike').toBigDecimal()) + myGetData(sTMETR) + sTDE
 		my3day += sTD + myGetData('imgName0') + sTDE
 		my3day += sTD + myGetData('imgName1') + sTDE
 		my3day += sTD + myGetData('imgName2') + sTDE
@@ -1282,22 +1280,22 @@ void PostPoll() {
 		my3day += '</tr>'
 		my3day += '<tr>'
 		if(myGetData('threedayLH')==sFLS){
-			my3day += sTD+'Low/High:'+sTDE
-			my3day += sTD + String.format(ddisp_twd, myGetData('forecastLow').toBigDecimal()) + myGetData(sTMETR) + '/' + String.format(ddisp_twd, myGetData('forecastHigh').toBigDecimal()) + myGetData(sTMETR) + sTDE
-			my3day += sTD + String.format(ddisp_twd, myGetData('forecastLow1').toBigDecimal()) + myGetData(sTMETR) + '/' + String.format(ddisp_twd, myGetData('forecastHigh1').toBigDecimal()) + myGetData(sTMETR)  + sTDE
-			my3day += sTD + String.format(ddisp_twd, myGetData('forecastLow2').toBigDecimal()) + myGetData(sTMETR) + '/' + String.format(ddisp_twd, myGetData('forecastHigh2').toBigDecimal()) + myGetData(sTMETR) + sTDE
+			my3day += sTD+'Low High'+sTDE
+			my3day += sTD + String.format(ddisp_twd, myGetData('forecastLow').toBigDecimal()) + myGetData(sTMETR) + sSPC + String.format(ddisp_twd, myGetData('forecastHigh').toBigDecimal()) + myGetData(sTMETR) + sTDE
+			my3day += sTD + String.format(ddisp_twd, myGetData('forecastLow1').toBigDecimal()) + myGetData(sTMETR) + sSPC + String.format(ddisp_twd, myGetData('forecastHigh1').toBigDecimal()) + myGetData(sTMETR)  + sTDE
+			my3day += sTD + String.format(ddisp_twd, myGetData('forecastLow2').toBigDecimal()) + myGetData(sTMETR) + sSPC + String.format(ddisp_twd, myGetData('forecastHigh2').toBigDecimal()) + myGetData(sTMETR) + sTDE
 		}else{
-			my3day += sTD+'High/Low:'+sTDE
-			my3day += sTD + String.format(ddisp_twd, myGetData('forecastHigh').toBigDecimal()) + myGetData(sTMETR) + '/' + String.format(ddisp_twd, myGetData('forecastLow').toBigDecimal()) + myGetData(sTMETR) + sTDE
-			my3day += sTD + String.format(ddisp_twd, myGetData('forecastHigh1').toBigDecimal()) + myGetData(sTMETR) + '/' + String.format(ddisp_twd, myGetData('forecastLow1').toBigDecimal()) + myGetData(sTMETR)  + sTDE
-			my3day += sTD + String.format(ddisp_twd, myGetData('forecastHigh2').toBigDecimal()) + myGetData(sTMETR) + '/' + String.format(ddisp_twd, myGetData('forecastLow2').toBigDecimal()) + myGetData(sTMETR) + sTDE
+			my3day += sTD+'High Low'+sTDE
+			my3day += sTD + String.format(ddisp_twd, myGetData('forecastHigh').toBigDecimal()) + myGetData(sTMETR) + sSPC + String.format(ddisp_twd, myGetData('forecastLow').toBigDecimal()) + myGetData(sTMETR) + sTDE
+			my3day += sTD + String.format(ddisp_twd, myGetData('forecastHigh1').toBigDecimal()) + myGetData(sTMETR) + sSPC + String.format(ddisp_twd, myGetData('forecastLow1').toBigDecimal()) + myGetData(sTMETR)  + sTDE
+			my3day += sTD + String.format(ddisp_twd, myGetData('forecastHigh2').toBigDecimal()) + myGetData(sTMETR) + sSPC + String.format(ddisp_twd, myGetData('forecastLow2').toBigDecimal()) + myGetData(sTMETR) + sTDE
 		}
 		my3day += '</tr>'
 		my3day += '<tr>'
-		my3day += sTD+'PoP/Precip:'+sTDE
-		my3day += sTD + myGetData('PoP') + '%/' + (myGetData('Precip0').toBigDecimal() > 0 ? String.format(ddisp_r, myGetData('Precip0').toBigDecimal()) + myGetData(sRMETR) : 'None') + sSPC + sTDE
-		my3day += sTD + myGetData('PoP1') + '%/' + (myGetData('Precip1').toBigDecimal() > 0 ? String.format(ddisp_r, myGetData('Precip0').toBigDecimal()) + myGetData(sRMETR) : 'None') + sSPC + sTDE
-		my3day += sTD + myGetData('PoP2') + '%/' + (myGetData('Precip2').toBigDecimal() > 0 ? String.format(ddisp_r, myGetData('Precip0').toBigDecimal()) + myGetData(sRMETR) : 'None') + sSPC + sTDE
+		my3day += sTD+'PoP Precip'+sTDE
+		my3day += sTD + myGetData('PoP') + '% ' + (myGetData('Precip0').toBigDecimal() > 0 ? String.format(ddisp_r, myGetData('Precip0').toBigDecimal()) + myGetData(sRMETR) : 'None') + sTDE
+		my3day += sTD + myGetData('PoP1') + '% ' + (myGetData('Precip1').toBigDecimal() > 0 ? String.format(ddisp_r, myGetData('Precip1').toBigDecimal()) + myGetData(sRMETR) : 'None') + sTDE
+		my3day += sTD + myGetData('PoP2') + '% ' + (myGetData('Precip2').toBigDecimal() > 0 ? String.format(ddisp_r, myGetData('Precip2').toBigDecimal()) + myGetData(sRMETR) : 'None') + sTDE
 		my3day += '</tr>'
 		my3day += '</table>'
 		my3day += '<table align="center">'
@@ -1337,7 +1335,7 @@ void PostPoll() {
 			wgust = myGetData('wind_gust').toBigDecimal()
 		}
 //	https://tinyurl.com/y42s2ndy points to https://openweathermap.org/city/
-		String mytextb = '<span style="display:inline"><a href="https://tinyurl.com/y42s2ndy/' + myGetData('OWML') + '" target="_blank">' + myGetData('city') + '</a><br>'
+		String mytextb = '<span style="display:inline"><a href="https://tinyurl.com/y42s2ndy/' + myGetData('OWML') + '" target="_blank"><B>' + myGetData('city') + '</B></a><br>'
 		String mytextm1 = myGetData('condition_text') + (noAlert ? sBLK : ' | ') + alertStyleOpen + (noAlert ? sBLK : myGetData('alertLink')) + alertStyleClose
 		String mytextm2 = myGetData('condition_text') + (noAlert ? sBLK : ' | ') + alertStyleOpen + (noAlert ? sBLK : myGetData('alertLink2')) + alertStyleClose
 		String mytexte = String.format(ddisp_twd, myGetData(sTEMP).toBigDecimal()) + myGetData(sTMETR) + sIMGS + myGetData('condition_icon_url') + iconClose + ' style="height:2.2em;display:inline">'
