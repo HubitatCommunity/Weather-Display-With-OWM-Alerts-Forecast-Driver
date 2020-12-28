@@ -58,9 +58,10 @@
 	on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 	for the specific language governing permissions and limitations under the License.
 
-	Last Update 12/12/2020
+	Last Update 12/27/2020
 { Left room below to document version changes...}
 
+	V0.4.7	12/27/2020	Added new current weather with 2-day forecast tile (weatherTile).
 	V0.4.6	12/12/2020	Changes to dahboard tile logo/hyperlinks when using weather.gov for alerts and there is an alert.
 	V0.4.5	12/08/2020	Bug fix for 'forecast_textn' optional attributes.
 	V0.4.4	12/03/2020	New tinyurl for icons.  Added tinyurl for weather.gov alert poll.
@@ -121,7 +122,7 @@ The way the 'optional' attributes work:
 	available in the dashboard is to delete the virtual device and create a new one AND DO NOT SELECT the
 	attribute you do not want to show.
 */
-static String version()	{  return '0.4.6'  }
+static String version()	{  return '0.4.7'  }
 import groovy.transform.Field
 
 metadata {
@@ -168,6 +169,9 @@ metadata {
 		
 //threedayTile
 		attribute 'threedayfcstTile', sSTR
+		
+//weatherTile
+		attribute 'weatherTile', sSTR
 
 //fcstHighLow
 		attribute 'forecastHigh', sNUM
@@ -297,6 +301,7 @@ metadata {
 @Field static final String sIMGS5='<img class="cI" src='
 @Field static final String sIMGS8='<img class="cIb" src='
 @Field static final String sTD='<td>'
+@Field static final String sTDe='<td></td>'
 @Field static final String sTR='<tr><td>'
 @Field static final String sSTR='string'
 @Field static final String sNUM='number'
@@ -717,7 +722,7 @@ void pollOWMHandler(resp, data) {
 
 		Boolean isF = myGetData(sTMETR) == sDF
 		
-		if(owmDaily && (threedayTilePublish || precipExtendedPublish || myTile2Publish)) {
+		if(owmDaily && (threedayTilePublish || altthreedayTilePublish || precipExtendedPublish || myTile2Publish)) {
 			BigDecimal t_p1 = (owmDaily==null || !owmDaily[1]?.rain ? 0.00 : owmDaily[1].rain.toBigDecimal()) + (owmDaily==null || !owmDaily[1]?.snow ? 0.00 : owmDaily[1].snow.toBigDecimal())
 			BigDecimal t_p2 = (owmDaily==null || !owmDaily[2]?.rain ? 0.00 : owmDaily[2].rain.toBigDecimal()) + (owmDaily==null || !owmDaily[2]?.snow ? 0.00 : owmDaily[2].snow.toBigDecimal())
 			myUpdData('Precip0', (Math.round((myGetData(sRMETR) == 'in' ? t_p0 * 0.03937008 : t_p0) * mult_r) / mult_r).toString())
@@ -732,7 +737,7 @@ void pollOWMHandler(resp, data) {
 			String tmpImg1= myGetData(sICON) + getImgName((!owmDaily[1].weather[0].id ? 999 : owmDaily[1].weather[0].id.toInteger()), sTRU) + imgT1
 			String tmpImg2= myGetData(sICON) + getImgName((!owmDaily[2].weather[0].id ? 999 : owmDaily[2].weather[0].id.toInteger()), sTRU) + imgT1
 
-			if(threedayTilePublish || myTile2Publish || fcstHighLowPublish) {
+			if(threedayTilePublish || altthreedayTilePublish || myTile2Publish || fcstHighLowPublish) {
 				myUpdData('day1', owmDaily[1]?.dt==null ? sBLK : new Date((Long)owmDaily[1].dt * 1000L).format('EEEE'))
 				myUpdData('day2', owmDaily[2]?.dt==null ? sBLK : new Date((Long)owmDaily[2].dt * 1000L).format('EEEE'))
 				myUpdData('is_day1', sTRU)
@@ -1336,15 +1341,15 @@ void PostPoll() {
 		OWMIcon = '<a href="https://tinyurl.com/zznws?lat=' + altLat + '&lon=' + altLon + '" target="_blank">' + sIMGS5 + myGetData(sICON) + 'NWS_240px.png style="height:2em"></a> @ ' + myGetData(sSUMLST)
 		OWMText = '<a href="https://tinyurl.com/zznws?lat=' + altLat + '&lon=' + altLon + '" target="_blank">Weather.gov</a> @ ' + myGetData(sSUMLST)
 	}
-		//  <<<<<<<<<< Begin Built 3dayfcstTile >>>>>>>>>>
+//  <<<<<<<<<< Begin Built 3dayfcstTile >>>>>>>>>>
 	if(threedayTilePublish) {
 		Boolean gitclose = (myGetData(sICON).toLowerCase().contains('://github.com/')) && (myGetData(sICON).toLowerCase().contains('/blob/master/'))
 		String iconClose = (gitclose ? '?raw=true>' : sRB)
 		String my3day = '<style type="text/css">.cI{height:45%}.cIb{height:80%}</style>'
 		my3day += '<table style="text-align:center;display:inline">'
 		my3day += sTR
-		my3day += '<B>' + myGetData('city') +'</B>'
-		my3day += sTD+'Today'
+		my3day += '<B>' + myGetData('city') + '</B>'
+		my3day += sTD +'Today'
 		my3day += sTD + myGetData('day1')
 		my3day += sTD + myGetData('day2')
 		my3day += sTR
@@ -1390,6 +1395,72 @@ void PostPoll() {
 		sendEvent(name: 'threedayfcstTile', value: my3day.take(1024))
 	}
 //  >>>>>>>>>> End Built 3dayfcstTile <<<<<<<<<<
+
+//  <<<<<<<<<< Begin Built weatherTile >>>>>>>>>>
+	if(weatherTilePublish) {
+        String myweather = '<style type="text/css">'
+        myweather += '.centerImage'
+        myweather += '{text-align:center;display:inline;height:50%;}'
+        myweather += '</style>'
+        myweather += '<table align="center" style="width:100%">'
+        myweather += '<tr>'
+        myweather += '<td></td>'
+        myweather += '<td>Today</td>'
+	    myweather += '<td>' + getDataValue('day1') + '</td>'
+	    myweather += '<td>' + getDataValue('day2') + '</td>'
+        myweather += '</tr>'
+        myweather += '<tr>'
+        myweather += '<td></td>'
+        myweather += '<td>' + getDataValue('imgName0') + '</td>'
+	    myweather += '<td>' + getDataValue('imgName1') + '</td>'
+	    myweather += '<td>' + getDataValue('imgName2') + '</td>'
+        myweather += '</tr>'
+        myweather += '<tr>'
+        myweather += '<td style="text-align:right">Now:</td>'
+        myweather += '<td>' + String.format(ddisp_twd, getDataValue('temperature').toBigDecimal()) + tMetric + '</td>'
+        myweather += '<td>' + getDataValue('forecast_text1') + '</td>'
+	    myweather += '<td>' + getDataValue('forecast_text2') + '</td>'
+        myweather += '</tr>'
+        myweather += '<tr>'
+        myweather += '<td style="text-align:right">Low:</td>'
+        myweather += '<td>' + String.format(ddisp_twd, getDataValue('forecastLow').toBigDecimal()) + tMetric + '</td>'
+        myweather += '<td>' + String.format(ddisp_twd, getDataValue('forecastLow1').toBigDecimal()) + tMetric + '</td>'
+        myweather += '<td>' + String.format(ddisp_twd, getDataValue('forecastLow2').toBigDecimal()) + tMetric + '</td>'
+        myweather += '</tr>'
+        myweather += '<tr>'
+        myweather += '<td style="text-align:right">High:</td>'
+        myweather += '<td>' + String.format(ddisp_twd, getDataValue('forecastHigh').toBigDecimal()) + tMetric + '</td>'
+        myweather += '<td>' + String.format(ddisp_twd, getDataValue('forecastHigh1').toBigDecimal()) + tMetric + '</td>'
+        myweather += '<td>' + String.format(ddisp_twd, getDataValue('forecastHigh2').toBigDecimal()) + tMetric + '</td>'
+        myweather += '</tr>'
+        myweather += '<tr>'
+        myweather += '<td style="text-align:right">Precip:</td>'
+        myweather += '<td>' + (getDataValue('Precip0').toBigDecimal() > 0 ? String.format(ddisp_r, getDataValue('Precip0').toBigDecimal()) + ' ' + rMetric : 'None') + '</td>'
+        myweather += '<td>' + (getDataValue('Precip1').toBigDecimal() > 0 ? String.format(ddisp_r, getDataValue('Precip1').toBigDecimal()) + ' ' + rMetric : 'None') + '</td>'
+        myweather += '<td>' + (getDataValue('Precip2').toBigDecimal() > 0 ? String.format(ddisp_r, getDataValue('Precip2').toBigDecimal()) + ' ' + rMetric : 'None') + '</td>'
+        myweather += '</tr>'
+        myweather += '</table>'
+		
+		if (myweather.length() + 33 > 1024) {
+			LOGWARN('Too much data to display.</br></br>Current weatherTile length (' + myweather.length() + ') exceeds maximum tile length by ' + (myweather.length() - 1024 - 33).toString()  + ' characters.')
+		} else {	
+        LOGINFO('myweather character length: ' + myweather.length() + '; OWMIcon length: ' + OWMIcon.length() + '; OWMIcon2 length: ' + OWMIcon2.length() + '; OWMText length: ' + OWMText.length())
+		}
+		
+        if(myweather.length() + 33 > 1024) {
+            myweather = 'Too much data to display.</br></br>Exceeds maximum tile length by ' + 1024 - myweather.length() - 33 + ' characters.'
+        } else if((myweather.length() + OWMIcon.length() + 11) < 1025) {
+            myweather += OWMIcon + '@ ' + getDataValue('futimetf').toString()
+        } else if((myweather.length() + OWMText.length() + 11) < 1025) {
+            myweather += OWMIcon2 + '@ ' + getDataValue('futimetf').toString()
+        } else if((myweather.length() + OWMText2.length() + 11) < 1025) {
+            myweather += OWMText + ' @ ' + getDataValue('futimetf').toString()
+        } else {
+            myweather += 'OpenWeatherMap.org @ ' + getDataValue('futimetf').toString()
+        }
+        sendEvent(name: 'weatherTile', value: myweather.take(1024))
+    }
+//  >>>>>>>>>> End Built weatherTile <<<<<<<<<<
 
 	if(myTilePublish){ // don't bother setting these values if it's not enabled
 		Boolean gitclose = (myGetData(sICON).toLowerCase().contains('://github.com/')) && (myGetData(sICON).toLowerCase().contains('/blob/master/'))
@@ -2068,6 +2139,7 @@ void sendEventPublish(evt)	{
 
 @Field final Map attributesMap = [
 	'threedayTile':				[title: 'Three Day Forecast Tile', d: 'Display Three Day Forecast Tile?', ty: false, defa: sFLS],
+	'weatherTile':				[title: 'Current Weather with Two Day Forecast Tile', d: 'Display Current Weather with Two Day Forecast Tile?', ty: false, defa: sFLS],
 	'alert':					[title: 'Weather Alert', d: 'Display any weather alert?', ty: false, defa: sFLS],
 	'betwixt':					[title: 'Slice of Day', d: 'Display the \'slice-of-day\'?', ty: sSTR, defa: sFLS],
 	'cloud':					[title: 'Cloud', d: 'Display cloud coverage %?', ty: sNUM, defa: sFLS],
