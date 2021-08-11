@@ -58,9 +58,10 @@
 	on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 	for the specific language governing permissions and limitations under the License.
 
-	Last Update 01/26/2021
+	Last Update 08/11/2021
 { Left room below to document version changes...}
 
+	V0.4.8	08/11/2021	Exposed cloud coverage forecasts.
 	V0.4.7	01/26/2021	Corrected a display issue on Alerts.
 	V0.4.6	12/12/2020	Changes to dahboard tile logo/hyperlinks when using weather.gov for alerts and there is an alert.
 	V0.4.5	12/08/2020	Bug fix for 'forecast_textn' optional attributes.
@@ -122,7 +123,7 @@ The way the 'optional' attributes work:
 	available in the dashboard is to delete the virtual device and create a new one AND DO NOT SELECT the
 	attribute you do not want to show.
 */
-static String version()	{  return '0.4.7'  }
+static String version()	{  return '0.4.8'  }
 import groovy.transform.Field
 
 metadata {
@@ -204,7 +205,11 @@ metadata {
 //precipExtended
 		attribute 'rainDayAfterTomorrow', sNUM
 		attribute 'rainTomorrow', sNUM
-
+//cloudExtended
+		attribute 'cloudToday', sNUM
+		attribute 'cloudTomorrow', sNUM
+		attribute 'cloudDayAfterTomorrow', sNUM
+		
 		command 'pollData'
 	}
 
@@ -726,6 +731,13 @@ void pollOWMHandler(resp, data) {
 			myUpdData('PoP1', (!owmDaily[1].pop ? 0 : Math.round(owmDaily[1].pop.toBigDecimal() * 100.toInteger())).toString())
 			myUpdData('PoP2', (!owmDaily[2].pop ? 0 : Math.round(owmDaily[2].pop.toBigDecimal() * 100.toInteger())).toString())
 		}
+		
+		if(owmDaily && cloudExtendedPublish) {
+			myUpdData('Cloud0', (owmDaily[0].clouds==null ? 1 : owmDaily[0].clouds <= 1 ? 1 : owmDaily[0].clouds).toString())
+			myUpdData('Cloud1', (owmDaily[1].clouds==null ? 1 : owmDaily[1].clouds <= 1 ? 1 : owmDaily[1].clouds).toString())
+			myUpdData('Cloud2', (owmDaily[2].clouds==null ? 1 : owmDaily[2].clouds <= 1 ? 1 : owmDaily[2].clouds).toString())
+		}
+
 		String imgT1=(myGetData(sICON).toLowerCase().contains('://github.com/') && myGetData(sICON).toLowerCase().contains('/blob/master/') ? '?raw=true' : sBLK)
 		if(owmDaily && owmDaily[1] && owmDaily[2]) {
 			String tmpImg0= myGetData(sICON) + getImgName((!owmDaily[0].weather[0].id ? 999 : owmDaily[0].weather[0].id.toInteger()), sTRU) + imgT1
@@ -777,7 +789,12 @@ void pollOWMHandler(resp, data) {
 			myUpdData('rainTomorrow', myGetData('Precip1'))
 			myUpdData('rainDayAfterTomorrow', myGetData('Precip2'))
 		}
-
+		if(cloudExtendedPublish){
+			myUpdData('cloudToday', myGetData('Cloud0'))
+			myUpdData('cloudTomorrow', myGetData('Cloud1'))
+			myUpdData('cloudDayAfterTomorrow', myGetData('Cloud2'))
+		}
+		
 // <<<<<<<<<< Begin Process Only If Wind from WD Is NOT Selected  >>>>>>>>>>
 		 if(sourceWind==false){
 			String w_string_bft
@@ -1296,6 +1313,11 @@ void PostPoll() {
 	if(precipExtendedPublish){ // don't bother setting these values if it's not enabled
 		sendEvent(name: 'rainDayAfterTomorrow', value: Math.round(myGetData('rainDayAfterTomorrow').toBigDecimal() * mult_r) / mult_r, unit: myGetData(sRMETR))	
 		sendEvent(name: 'rainTomorrow', value: Math.round(myGetData('rainTomorrow').toBigDecimal() * mult_r) / mult_r, unit: myGetData(sRMETR))
+	}
+	if(cloudExtendedPublish){ // don't bother setting these values if it's not enabled
+		sendEvent(name: 'cloudToday', value: myGetData('cloudToday').toInteger(), unit: '%')
+		sendEvent(name: 'cloudTomorrow', value: myGetData('cloudTomorrow').toInteger(), unit: '%')
+		sendEvent(name: 'cloudDayAfterTomorrow', value: myGetData('cloudDayAfterTomorrow').toInteger(), unit: '%')
 	}
 	sendEventPublish(name: 'solarradiation', value: myGetData('solarradiation'))
 	sendEventPublish(name: 'state', value: myGetData('state'))
@@ -1935,7 +1957,7 @@ void SummaryMessage(Boolean SType, String Slast_poll_date, String Slast_poll_tim
 		wSum = myGetData('condition_text') + sSPC
 		wSum+= ((!SforecastTemp || SforecastTemp==sBLK) ? '. ' : SforecastTemp)
 		wSum+= ' Humidity: ' + myGetData('humidity') + '%. Temperature: ' + String.format(myGetData('ddisp_twd'), myGetData(sTEMP).toBigDecimal()) + myGetData(sTMETR) + '. '
-		wSum+= myGetData('wind_string') + ', gusts: ' + ((windgust == 0.00) ? 'calm. ' : 'up to ' + windgust + sSPC + myGetData(sDMETR) + sDOT)
+		wSum+= myGetData('wind_string') + ', gusts: ' + ((windgust == 0.00) ? 'calm. ' : 'up to ' + windgust + myGetData(sDMETR) + sDOT)
 	}
 	wSum = wSum.take(1024)
 	sendEvent(name: 'weatherSummary', value: wSum)
@@ -2071,6 +2093,7 @@ void sendEventPublish(evt)	{
 	'alert':					[title: 'Weather Alert', d: 'Display any weather alert?', ty: false, defa: sFLS],
 	'betwixt':					[title: 'Slice of Day', d: 'Display the \'slice-of-day\'?', ty: sSTR, defa: sFLS],
 	'cloud':					[title: 'Cloud', d: 'Display cloud coverage %?', ty: sNUM, defa: sFLS],
+	'cloudExtended':			[t: 'Cloud Forecast', d: 'Display cloud coverage forecast?', ty: false, defa: sFLS],
 	'condition_code':			[title: 'Condition Code', d: 'Display \'condition_code\'?', ty: sSTR, defa: sFLS],
 	'condition_icon_only':		[title: 'Condition Icon Only', d: 'Display \'condition_code_only\'?', ty: sSTR, defa: sFLS],
 	'condition_icon_url':		[title: 'Condition Icon URL', d: 'Display \'condition_code_url\'?', ty: sSTR, defa: sFLS],
