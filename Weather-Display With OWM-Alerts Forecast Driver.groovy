@@ -1231,11 +1231,12 @@ void updateLux(Boolean pollAgain=true) {
 void PostPoll() {
 	if(ifreInstalled()) { updated(); return }
 //	Map sunRiseSet = parseJson(myGetData('sunRiseSet')).results
+	String tfmt='yyyy-MM-dd\'T\'HH:mm:ssXXX'
+	String tfmt1=myGetData('timeFormat')
 	if(myGetData('sunRiseSet')!=sNULL) {
 		Map sunRiseSet = parseJson(myGetData('sunRiseSet')).results
 /*  SunriseSunset Data Elements */
-		String tfmt='yyyy-MM-dd\'T\'HH:mm:ssXXX'
-		String tfmt1=myGetData('timeFormat')
+
 		if(localSunrisePublish){  // don't bother setting these values if it's not enabled
 			sendEvent(name: tw_begin, value: new Date().parse(tfmt, (String)sunRiseSet.civil_twilight_begin).format(tfmt1, TimeZone.getDefault()))
 			sendEvent(name: sunriseTime, value: new Date().parse(tfmt, (String)sunRiseSet.sunrise).format(tfmt1, TimeZone.getDefault()))
