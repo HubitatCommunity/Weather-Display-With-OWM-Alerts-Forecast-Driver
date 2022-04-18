@@ -1233,6 +1233,8 @@ void PostPoll() {
 //	Map sunRiseSet = parseJson(myGetData('sunRiseSet')).results
 	String tfmt='yyyy-MM-dd\'T\'HH:mm:ssXXX'
 	String tfmt1=myGetData('timeFormat')
+	String dfmt1=myGetData('dateFormat')
+	String tfmt2='EEE MMM dd HH:mm:ss z yyyy'
 	if(myGetData('sunRiseSet')!=sNULL) {
 		Map sunRiseSet = parseJson(myGetData('sunRiseSet')).results
 /*  SunriseSunset Data Elements */
