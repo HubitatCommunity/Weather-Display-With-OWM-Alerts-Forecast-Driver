@@ -799,7 +799,7 @@ void pollOWMHandler(resp, data) {
 		
 // <<<<<<<<<< Begin Process Only If Wind from WD Is NOT Selected  >>>>>>>>>>
 		 if(sourceWind w==false){
-			String w_string_bft=sNUL
+			String w_string_bft=sNULL
 			String w_bft_icon=sNULL
 			BigDecimal t_ws = owm?.current?.wind_speed==null ? 0.00 : owm.current.wind_speed.toBigDecimal()
 			if(t_ws < 1.0) {
