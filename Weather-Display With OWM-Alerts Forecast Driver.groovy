@@ -1230,15 +1230,13 @@ void updateLux(Boolean pollAgain=true) {
 // <<<<<<<<<< Begin Post-Poll Routines >>>>>>>>>>
 void PostPoll() {
 	if(ifreInstalled()) { updated(); return }
-//	Map sunRiseSet = parseJson(myGetData('sunRiseSet')).results
-	String tfmt='yyyy-MM-dd\'T\'HH:mm:ssXXX'
+    String tfmt='yyyy-MM-dd\'T\'HH:mm:ssXXX'
 	String tfmt1=myGetData('timeFormat')
-	String dfmt1=myGetData('dateFormat')
+    String dfmt1=myGetData('dateFormat')
 	String tfmt2='EEE MMM dd HH:mm:ss z yyyy'
-	if(myGetData('sunRiseSet')!=sNULL) {
+    if(myGetData('sunRiseSet')!=sNULL) {
 		Map sunRiseSet = parseJson(myGetData('sunRiseSet')).results
 /*  SunriseSunset Data Elements */
-
 		if(localSunrisePublish){  // don't bother setting these values if it's not enabled
 			sendEvent(name: tw_begin, value: new Date().parse(tfmt, (String)sunRiseSet.civil_twilight_begin).format(tfmt1, TimeZone.getDefault()))
 			sendEvent(name: sunriseTime, value: new Date().parse(tfmt, (String)sunRiseSet.sunrise).format(tfmt1, TimeZone.getDefault()))
@@ -1250,7 +1248,7 @@ void PostPoll() {
 		sendEvent(name: 'localSunset', value: new Date().parse(tfmt, (String)sunRiseSet.sunset).format(tfmt1, TimeZone.getDefault())) // only needed for certain dashboards
 		sendEvent(name: 'localSunrise', value: new Date().parse(tfmt, (String)sunRiseSet.sunrise).format(tfmt1, TimeZone.getDefault())) // only needed for certain dashboards
 		}
-	}
+    }
 	Integer mult_twd = myGetData('mult_twd')==sNULL ? 1 : myGetData('mult_twd').toInteger()
 	Integer mult_p = myGetData('mult_p')==sNULL ? 1 : myGetData('mult_p').toInteger()
 	Integer mult_r = myGetData('mult_r')==sNULL ? 1 : myGetData('mult_r').toInteger()
