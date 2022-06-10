@@ -58,10 +58,11 @@
 	on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 	for the specific language governing permissions and limitations under the License.
 
-	Last Update 04/17/2022
+	Last Update 06/10/2022
 { Left room below to document version changes...}
 
-	V0.4.9	04/17/2022	Fallback for Sunrise-Sunset.org failure.
+	V0.5.0	06/10/2022	Corrected PoP1 & PoP2 from not displaying when Extended precipitation forecast was selected.
+    V0.4.9	04/17/2022	Fallback for Sunrise-Sunset.org failure.
 	V0.4.8	08/11/2021	Exposed cloud coverage forecasts.
 	V0.4.7	01/26/2021	Corrected a display issue on Alerts.
 	V0.4.6	12/12/2020	Changes to dahboard tile logo/hyperlinks when using weather.gov for alerts and there is an alert.
@@ -124,7 +125,7 @@ The way the 'optional' attributes work:
 	available in the dashboard is to delete the virtual device and create a new one AND DO NOT SELECT the
 	attribute you do not want to show.
 */
-static String version()	{  return '0.4.9'  }
+static String version()	{  return '0.5.0'  }
 import groovy.transform.Field
 
 metadata {
@@ -206,6 +207,9 @@ metadata {
 //precipExtended
 		attribute 'rainDayAfterTomorrow', sNUM
 		attribute 'rainTomorrow', sNUM
+        attribute 'PoP1', sNUM
+        attribute 'PoP2', sNUM
+
 //cloudExtended
 		attribute 'cloudToday', sNUM
 		attribute 'cloudTomorrow', sNUM
@@ -1320,6 +1324,8 @@ void PostPoll() {
 	if(precipExtendedPublish){ // don't bother setting these values if it's not enabled
 		sendEvent(name: 'rainDayAfterTomorrow', value: Math.round(myGetData('rainDayAfterTomorrow').toBigDecimal() * mult_r) / mult_r, unit: myGetData(sRMETR))	
 		sendEvent(name: 'rainTomorrow', value: Math.round(myGetData('rainTomorrow').toBigDecimal() * mult_r) / mult_r, unit: myGetData(sRMETR))
+        sendEvent(name: 'PoP1', value: myGetData('PoP1').toInteger())
+        sendEvent(name: 'PoP2', value: myGetData('PoP2').toInteger())
 	}
 	if(cloudExtendedPublish){ // don't bother setting these values if it's not enabled
 		sendEvent(name: 'cloudToday', value: myGetData('cloudToday').toInteger(), unit: '%')
@@ -1660,7 +1666,7 @@ void initialize_poll() {
 			case '5Minutes':
 				myFcstSched = "${dsseconds} ${minutes5}/5 * * * ? *"
 				break
-			case '10 Minutes':
+			case '10Minutes':
 				myFcstSched = "${dsseconds} ${minutes10}/10 * * * ? *"
 				break
 			case '15Minutes':
