@@ -62,7 +62,7 @@
 { Left room below to document version changes...}
 
 	V0.5.0	06/10/2022	Corrected PoP1 & PoP2 from not displaying when Extended precipitation forecast was selected.
-    V0.4.9	04/17/2022	Fallback for Sunrise-Sunset.org failure.
+    	V0.4.9	04/17/2022	Fallback for Sunrise-Sunset.org failure.
 	V0.4.8	08/11/2021	Exposed cloud coverage forecasts.
 	V0.4.7	01/26/2021	Corrected a display issue on Alerts.
 	V0.4.6	12/12/2020	Changes to dahboard tile logo/hyperlinks when using weather.gov for alerts and there is an alert.
