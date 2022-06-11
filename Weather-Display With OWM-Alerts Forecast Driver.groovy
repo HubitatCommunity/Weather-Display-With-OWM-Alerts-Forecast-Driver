@@ -58,11 +58,12 @@
 	on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 	for the specific language governing permissions and limitations under the License.
 
-	Last Update 06/10/2022
+	Last Update 06/11/2022
 { Left room below to document version changes...}
 
-	V0.5.0	06/10/2022	Corrected PoP1 & PoP2 from not displaying when Extended precipitation forecast was selected.
-    	V0.4.9	04/17/2022	Fallback for Sunrise-Sunset.org failure.
+    V0.5.1  06/11/2022  Corrected 3 day tile icon to hon0r user's selection of Current or Forecast icon.
+    V0.5.0	06/10/2022	Corrected PoP1 & PoP2 from not displaying when Extended precipitation forecast was selected.
+    V0.4.9	04/17/2022	Fallback for Sunrise-Sunset.org failure.
 	V0.4.8	08/11/2021	Exposed cloud coverage forecasts.
 	V0.4.7	01/26/2021	Corrected a display issue on Alerts.
 	V0.4.6	12/12/2020	Changes to dahboard tile logo/hyperlinks when using weather.gov for alerts and there is an alert.
@@ -125,7 +126,7 @@ The way the 'optional' attributes work:
 	available in the dashboard is to delete the virtual device and create a new one AND DO NOT SELECT the
 	attribute you do not want to show.
 */
-static String version()	{  return '0.5.0'  }
+static String version()	{  return '0.5.1'  }
 import groovy.transform.Field
 
 metadata {
@@ -748,7 +749,8 @@ void pollOWMHandler(resp, data) {
 
 		String imgT1=(myGetData(sICON).toLowerCase().contains('://github.com/') && myGetData(sICON).toLowerCase().contains('/blob/master/') ? '?raw=true' : sBLK)
 		if(owmDaily && owmDaily[1] && owmDaily[2]) {
-			String tmpImg0= myGetData(sICON) + getImgName((!owmDaily[0].weather[0].id ? 999 : owmDaily[0].weather[0].id.toInteger()), sTRU) + imgT1
+//			String tmpImg0= myGetData(sICON) + getImgName((!owmDaily[0].weather[0].id ? 999 : owmDaily[0].weather[0].id.toInteger()), sTRU) + imgT1
+            String tmpImg0= myGetData(sICON) + (myGetData('iconType')== sTRU ? getImgName(myGetData('condition_id').toInteger(), myGetData('is_day')) : getImgName(myGetData('forecast_id').toInteger(), myGetData('is_day'))) + imgT1            
 			String tmpImg1= myGetData(sICON) + getImgName((!owmDaily[1].weather[0].id ? 999 : owmDaily[1].weather[0].id.toInteger()), sTRU) + imgT1
 			String tmpImg2= myGetData(sICON) + getImgName((!owmDaily[2].weather[0].id ? 999 : owmDaily[2].weather[0].id.toInteger()), sTRU) + imgT1
 
@@ -780,8 +782,8 @@ void pollOWMHandler(resp, data) {
 				myUpdData('forecastEve1', adjTemp(owmDaily[1]?.temp?.eve, isF, mult_twd))
 				myUpdData('forecastNight1', adjTemp(owmDaily[1]?.temp?.night, isF, mult_twd))
 
-				myUpdData('imgName0', sIMGS5 + myGetData(sICON) + getImgName(myGetData('condition_id').toInteger(), myGetData('is_day')) + imgT1 + sRB) // for Current Condition text for 'Today'
-//				myUpdData('imgName0', sIMGS5 + tmpImg0 + sRB) // For the daily forecast text for 'Toady' 
+//				myUpdData('imgName0', sIMGS5 + myGetData(sICON) + getImgName(myGetData('condition_id').toInteger(), myGetData('is_day')) + imgT1 + sRB) // for Current Condition text for 'Today'
+				myUpdData('imgName0', sIMGS5 + tmpImg0 + sRB) // For the daily forecast text for 'Toady' 
 				myUpdData('imgName1', sIMGS5 + tmpImg1 + sRB)
 				myUpdData('imgName2', sIMGS5 + tmpImg2 + sRB)
 			}
@@ -986,7 +988,7 @@ void pollOWMHandler(resp, data) {
 		}
 		// <<<<<<<<<< Begin Icon Processing  >>>>>>>>>>
 		String imgName = (myGetData('iconType')== sTRU ? getImgName(myGetData('condition_id').toInteger(), myGetData('is_day')) : getImgName(myGetData('forecast_id').toInteger(), myGetData('is_day')))
-		sendEventPublish(name: 'condition_icon', value: sIMGS5 + myGetData(sICON) + imgName + imgT1 + sRB)
+        sendEventPublish(name: 'condition_icon', value: sIMGS5 + myGetData(sICON) + imgName + imgT1 + sRB)
 		sendEventPublish(name: 'condition_iconWithText', value: sIMGS5 + myGetData(sICON) + imgName + imgT1 + sRB+ sBR + (myGetData('iconType')== sTRU ? myGetData('condition_text') : myGetData('forecast_text')))
 		sendEventPublish(name: 'condition_icon_url', value: myGetData(sICON) + imgName + imgT1)
 		myUpdData('condition_icon_url', myGetData(sICON) + imgName + imgT1)
@@ -1702,7 +1704,7 @@ void initialize_poll() {
 			case '5Minutes':
 				myStationSched = "${dsseconds} ${minutes5}/5 * * * ? *"
 				break
-			case '10Minutes':
+			case '10 Minutes':
 				myStationSched = "${dsseconds} ${minutes10}/10 * * * ? *"
 				break
 			case '15Minutes':
