@@ -1702,7 +1702,7 @@ void initialize_poll() {
 			case '5Minutes':
 				myStationSched = "${dsseconds} ${minutes5}/5 * * * ? *"
 				break
-			case '10 Minutes':
+			case '10Minutes':
 				myStationSched = "${dsseconds} ${minutes10}/10 * * * ? *"
 				break
 			case '15Minutes':
