@@ -58,9 +58,10 @@
 	on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 	for the specific language governing permissions and limitations under the License.
 
-	Last Update 06/12/2022
+	Last Update 07/26/2022
 { Left room below to document version changes...}
 
+    V0.5.3	07/26/2022	Fallback to hub location defaults and estimates for Sunrise-Sunset.org failure.
     V0.5.2  06/12/2022  Both MyTile and the Three day Forecast Tile use the Icon and Text selected in the 'Condition Icon/Text for current day on MyTile & Three Day Forecast Tile' option.
     V0.5.1  06/11/2022  Corrected 3 day tile icon to hon0r user's selection of Current or Forecast icon.
     V0.5.0	06/10/2022	Corrected PoP1 & PoP2 from not displaying when Extended precipitation forecast was selected.
@@ -127,7 +128,7 @@ The way the 'optional' attributes work:
 	available in the dashboard is to delete the virtual device and create a new one AND DO NOT SELECT the
 	attribute you do not want to show.
 */
-static String version()	{  return '0.5.2'  }
+static String version()	{  return '0.5.3'  }
 import groovy.transform.Field
 
 metadata {
@@ -351,11 +352,21 @@ void sunRiseSetHandler(resp, data) {
 		myUpdData('setTime1', new Date().parse(tfmt, (String)sunRiseSet.sunset).plus(1).format(tfmt1, TimeZone.getDefault()))
 		myUpdData('setTime2', new Date().parse(tfmt, (String)sunRiseSet.sunset).plus(2).format(tfmt1, TimeZone.getDefault()))
 	}else{
-		LOGWARN('Sunrise-Sunset api did not return data.')
+        LOGWARN('Sunrise-Sunset api did not return data. Using Hub estimates.')
+        String tfmt1='HH:mm'
 		myUpdData('sunRiseSet', sNULL)
-		myUpdData('localSunset', todaysSunrise.format(myGetData('timeFormat'), TimeZone.getDefault()))
-		myUpdData('localSunrise', todaysSunset.format(myGetData('timeFormat'), TimeZone.getDefault()))
-	}
+        myUpdData('riseTime', todaysSunrise.format(tfmt1, TimeZone.getDefault()))
+		myUpdData('noonTime', new Date(todaysSunrise.getTime() + ((todaysSunset.getTime() - todaysSunrise.getTime()).intdiv(2))).format(tfmt1, TimeZone.getDefault()))
+        myUpdData('setTime', todaysSunset.format(tfmt1, TimeZone.getDefault()))
+        myUpdData('tw_begin', new Date(todaysSunrise.getTime() - (10*60*1000)).format(tfmt1, TimeZone.getDefault()))
+        myUpdData('tw_end', new Date(todaysSunset.getTime() + (10*60*1000)).format(tfmt1, TimeZone.getDefault()))
+        myUpdData('localSunset', todaysSunset.format(myGetData('timeFormat'), TimeZone.getDefault()))
+		myUpdData('localSunrise', todaysSunrise.format(myGetData('timeFormat'), TimeZone.getDefault()))
+		myUpdData('riseTime1', new Date(todaysSunrise.getTime() - (60*60*24*1000)).format(tfmt1, TimeZone.getDefault()))
+		myUpdData('riseTime2', new Date(todaysSunrise.getTime() - (60*60*24*1000*2)).format(tfmt1, TimeZone.getDefault()))
+		myUpdData('setTime1', new Date(todaysSunset.getTime() - (60*60*24*1000)).format(tfmt1, TimeZone.getDefault()))
+		myUpdData('setTime2', new Date(todaysSunset.getTime() - (60*60*24*1000*2)).format(tfmt1, TimeZone.getDefault()))
+    }
 }
 // >>>>>>>>>> End Sunrise-Sunset Poll Routines <<<<<<<<<<
 
