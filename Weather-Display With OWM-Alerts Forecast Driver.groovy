@@ -2313,41 +2313,40 @@ void updateCheck()
 }
 
 void updateCheckHandler(resp, data) {
-
 	state.InternalName = 'Weather-Display With OWM-Alerts Forecast Driver'
 	Boolean descTextEnable = settings.logSet ?: false
 	if (resp.getStatus() == 200 || resp.getStatus() == 207) {
-		Map respUD = parseJson(resp.data)
+        Map respUD = parseJson(resp.data)
 		// log.warn " Version Checking - Response Data: $respUD"   // Troubleshooting Debug Code - Uncommenting this line should show the JSON response from your webserver
-		state.Copyright = respUD.copyright
+        state.Copyright = respUD.copyright
 		// uses reformattted 'version2.json'
 		String Ver = (String)respUD.driver.(state.InternalName).ver
 		String newVer = padVer(Ver)
 		String currentVer = padVer(version())
 		state.UpdateInfo = (respUD.driver.(state.InternalName).updated)
-		// log.debug 'updateCheck: ${respUD.driver.(state.InternalName).ver}, $state.UpdateInfo, ${respUD.author}'
-		switch(newVer) {
-			case { it == 'NLS'}:
+        // log.debug 'updateCheck: ${respUD.driver.(state.InternalName).ver}, $state.UpdateInfo, ${respUD.author}'
+        switch(newVer) {
+            case { it == 'NLS'}:
 				state.Status = '<b>** This Driver is no longer supported by ' + respUD.author +'  **</b>'
 				if (descTextEnable) log.warn '** This Driver is no longer supported by ${respUD.author} **'
 				break
-			case { it > currentVer}:
-				state.Status = '<b>New Version Available (Version: ' + Ver + ')</b>'
+            case { it > currentVer}:
+                state.Status = '<b>New Version Available (Version: ' + Ver + ')</b>'
 				if (descTextEnable) log.warn '** There is a newer version of this Driver available  (Version: ' + Ver + ') **'
-				if (descTextEnable) log.warn '** ' + (String)state.UpdateInfo + ' **'
-				break
+            if (descTextEnable) log.warn '** ' + (String)state.UpdateInfo + ' **'
+            break
 			case { it < currentVer}:
 				state.Status = '<b>You are using a Test version of this Driver (Expecting: ' + Ver + ')</b>'
 				if (descTextEnable) log.warn 'You are using a Test version of this Driver (Expecting: ' + Ver + ')'
 				break
-			defa:
-				state.Status = 'Current Version: ' + Ver
+			default:
+                state.Status = 'Current Version: ' + Ver
 				if (descTextEnable) log.info 'You are using the current version of this driver'
 				break
-		}
-	}else{
-		log.error 'Something went wrong: CHECK THE JSON FILE AND IT\'S URI'
-	}
+        }
+    }else{
+        log.error 'Something went wrong: CHECK THE JSON FILE AND IT\'S URI'
+    }
 }
 /*
 	padVer
