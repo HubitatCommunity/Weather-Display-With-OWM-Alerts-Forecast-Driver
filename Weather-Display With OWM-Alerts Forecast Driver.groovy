@@ -58,9 +58,10 @@
 	on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 	for the specific language governing permissions and limitations under the License.
 
-	Last Update 01/05/2023
+	Last Update 01/23/2023
 { Left room below to document version changes...}
 
+    V0.5.9	01/23/2023	Bug fix for wind_cardinal that is creating a "No Data" response w/ 3rd party tile apps.
     V0.5.8	01/05/2023	Bug fix for myTile not showing icon when neither the 'Three day Forecast Tile' nor the 'Forecast High/Low Temperatures' Optional attributes are selected.
     V0.5.7	08/23/2022	Added user selection of 2.5 or 3.5 OWM API Key; Moved Schedule Change notice to Extended Logging.
     V0.5.6	08/22/2022	Removed the sunrise-sunset.org poll.
@@ -140,7 +141,7 @@ The way the 'optional' attributes work:
 //file:noinspection GroovyAssignabilityCheck
 //file:noinspection GrDeprecatedAPIUsage
 
-static String version()	{  return '0.5.8'  }
+static String version()	{  return '0.5.9'  }
 import groovy.transform.Field
 
 metadata {
@@ -2259,7 +2260,7 @@ void sendEventPublish(evt)	{
 	'state':					[title: 'State', d: 'Display \'state\'?', ty: sSTR, defa: sFLS],
 	'vis':						[title: 'Visibility (in default unit)', d: 'Display visibility distance?', ty: sNUM, defa: sFLS],
 	'weatherSummary':			[title: 'Weather Summary Message', d: 'Display the Weather Summary?', ty: sSTR, defa: sFLS],
-	'wind_cardinal':			[title: 'Wind Cardinal', d: 'Display the Wind Direction (text initials)?', ty: sNUM, defa: sFLS],
+	'wind_cardinal':			[title: 'Wind Cardinal', d: 'Display the Wind Direction (text initials)?', ty: sSTR, defa: sFLS],
 	'wind_degree':				[title: 'Wind Degree', d: 'Display the Wind Direction (number)?', ty: sNUM, defa: sFLS],
 	'wind_direction':			[title: 'Wind direction', d: 'Display the Wind Direction?', ty: sSTR, defa: sFLS],
 	'wind_gust':				[title: 'Wind gust (in default unit)', d: 'Display the Wind Gust?', ty: sNUM, defa: sFLS],
