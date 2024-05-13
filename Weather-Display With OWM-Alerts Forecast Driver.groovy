@@ -58,9 +58,10 @@
 	on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 	for the specific language governing permissions and limitations under the License.
 
-	Last Update 04/17/2024
+	Last Update 05/13/2024
 { Left room below to document version changes...}
 
+    V0.6.4	05/13/2024	Fixed API URL to pull location alerts.
     V0.6.3	04/17/2024	Fixed API URL to pull location alerts.
     V0.6.2	08/31/2023	Added pull request from @nh.schottfam to display sun 'altitude' & 'azimuth' as stand-alone optional attributes. Code cleanups.
     V0.6.1	06/03/2023	Code clean-up & corrections from @nh.schottfam (Thanks!).
@@ -145,7 +146,7 @@ The way the 'optional' attributes work:
 //file:noinspection GroovyAssignabilityCheck
 //file:noinspection GrDeprecatedAPIUsage
 
-static String version()	{  return '0.6.3'  }
+static String version()	{  return '0.6.4'  }
 import groovy.transform.Field
 
 metadata {
@@ -607,7 +608,7 @@ void doPollWD(Map wd) {
 	else if (tma >= 14 && tma < 18) {mPhase = 'Full Moon'}
 	else if (tma >= 18 && tma < 22) {mPhase = 'Waning Gibbous'}
 	else if (tma >= 22 && tma < 26) {mPhase = 'Last Quarter'}
-	else if (tma >= 26) {mPhase = 'Waxing Gibbous'}
+	else if (tma >= 26) {mPhase = 'Waning Cresent'}
 	myUpdData('moonPhase', mPhase)
 	if(solarradiationPublish){
 		if(!wd.everything.weather.solar.irradiance.wm2){
