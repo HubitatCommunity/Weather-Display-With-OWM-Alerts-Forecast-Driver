@@ -1668,12 +1668,12 @@ void finishSched() {
 	runEvery10Minutes(updateLux, [Data: [true]])
 	Random rand = new Random(wnow())
 	Integer ssseconds = rand.nextInt(60)
-	schedule("${ssseconds} 20 0/8 ? * * *", pollSunRiseSet)
+	schedule("${ssseconds} 20 0/8 ? * * *", "pollSunRiseSet")
 	runIn(5, pollData)
 	if(settingEnable) runIn(2100,settingsOff)// 'roll up' (hide) the condition selectors after 35 min
 	if(settings.txtEnable) runIn(1800,logsOff)// turns off extended logging after 30 min
 	Integer r_minutes = rand.nextInt(60)
-	schedule("0 ${r_minutes} 8 ? * FRI *", updateCheck)
+	schedule("0 ${r_minutes} 8 ? * FRI *", "updateCheck")
 }
 
 void initMe() {
@@ -1783,8 +1783,8 @@ void pollOWMlHandler(resp, data) {
 
 
 void initialize_poll() {
-	unschedule(pollWD)
-	unschedule(pollOWM)
+	unschedule("pollWD")
+	unschedule("pollOWM")
 	Random rand = new Random(wnow())
 	Integer ssseconds = rand.nextInt(60)
 	Integer minutes2 = rand.nextInt(2)
@@ -1813,7 +1813,7 @@ void initialize_poll() {
 	}else{
 		myFcstPoll = pollIntervalFcstnight
 	}
-	if(myFcstPoll == 'Manual Forcecast Poll Only'){
+	if(myFcstPoll == 'Manual Poll Only'){
 		LOGINFO('MANUAL FORECAST POLLING ONLY')
 	}else{
 		myFcstPoll = myFcstPoll.replace(sSPC,sBLK)
@@ -1842,11 +1842,11 @@ void initialize_poll() {
 			defa:
 				myFcstSched = "${dsseconds} ${minutes60} ${hours3}/3 * * ? *"
 		}
-		schedule(myFcstSched, pollOWM)
+		schedule(myFcstSched, "pollOWM")
 	}
 	String pollIntervalStation = (settings.pollIntervalStation ?: '3 Hours')
 	String myStationPoll = pollIntervalStation
-	if(myStationPoll == 'Manual Forcecast Poll Only'){
+	if(myStationPoll == 'Manual Poll Only'){
 		LOGINFO('MANUAL STATION POLLING ONLY')
 	}else{
 		myStationPoll = myStationPoll.replace(sSPC,sBLK)
@@ -1878,7 +1878,7 @@ void initialize_poll() {
 			defa:
 				myStationSched = "${dsseconds} ${minutes60} ${hours3}/3 * * ? *"
 		}
-		schedule(myStationSched, pollWD)
+		schedule(myStationSched, "pollWD")
 	}
 }
 
