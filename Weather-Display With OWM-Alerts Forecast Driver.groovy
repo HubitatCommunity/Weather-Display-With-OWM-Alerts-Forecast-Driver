@@ -61,7 +61,7 @@
 	Last Update 01/17/2026
 { Left room below to document version changes...}
 
-    V0.6.5	01/17/2025	Replaced icons wityhj unicode characters in dashboard tiles.
+    V0.6.5	01/17/2026	Replaced icons wityhj unicode characters in dashboard tiles.
 	V0.6.4	05/13/2024	Fixed API URL to pull location alerts.
     V0.6.3	04/17/2024	Fixed API URL to pull location alerts.
     V0.6.2	08/31/2023	Added pull request from @nh.schottfam to display sun 'altitude' & 'azimuth' as stand-alone optional attributes. Code cleanups.
