@@ -58,10 +58,11 @@
 	on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 	for the specific language governing permissions and limitations under the License.
 
-	Last Update 01/17/2026
+	Last Update 03/19/2026
 { Left room below to document version changes...}
 
-    V0.6.5	01/17/2026	Replaced icons wityhj unicode characters in dashboard tiles.
+    V0.6.6	03/19/2026	Clear expired NWS alerts (@rschumaker).
+	V0.6.5	01/17/2026	Replaced icons wityhj unicode characters in dashboard tiles.
 	V0.6.4	05/13/2024	Fixed API URL to pull location alerts.
     V0.6.3	04/17/2024	Fixed API URL to pull location alerts.
     V0.6.2	08/31/2023	Added pull request from @nh.schottfam to display sun 'altitude' & 'azimuth' as stand-alone optional attributes. Code cleanups.
@@ -267,7 +268,7 @@ metadata {
 			input 'rainFormat', 'enum', required: true, defaultValue: 'Inches', title: 'Display Unit - Precipitation: Inches or Millimeters',  options: ['Inches', 'Millimeters']
 			input 'luxjitter', 'bool', title: 'Use lux jitter control (rounding)?', required: true, defaultValue: false
 //	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
-			input 'iconLocation', 'text', required: true, defaultValue: 'https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/', title: 'Alternative Icon Location:'
+			input 'iconLocation', 'text', required: false, defaultValue: '', title: 'Alternative Icon Location:<br><i>blank for default location</i>'
 			input 'iconType', 'bool', title: 'Condition Icon/Text for current day on MyTile & Three Day Forecast Tile: On=Current or Off=Forecast', required: true, defaultValue: false
 			input 'sourcefeelsLike', 'bool', required: true, title: 'Feelslike from Weather-Display?', defaultValue: false
 			input 'sourceIllumination', 'bool', required: true, title: 'Illuminance from Weather-Display?', defaultValue: true
@@ -294,7 +295,7 @@ metadata {
 		}
 	}
 }
-
+iconLocation = (!iconLocation || iconLocation == null) ? 'https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/' : iconLocation
 @Field static final String sNULL=(String)null
 @Field static final String sAB='<a>'
 @Field static final String sACB='</a>'
@@ -990,6 +991,17 @@ void pollOWMHandler(resp, data) {
 							}
 						}
 						myUpdData('alertCnt', alertCnt.toString())
+
+// ADD: If NWS confirms no active alerts, clear immediately rather than
+// waiting for the next OWM poll to evaluate the now-updated curAl.
+// This also handles the case where prior pollWDGHandler calls failed
+// with HTTP errors, leaving curAl permanently stale.
+                        if(myGetData('curAl') == sNCWA) {
+                            clearAlerts()
+                            sendEvent(name: 'alert', value: myGetData('alert'))
+                            sendEvent(name: 'alertDescr', value: myGetData('alertDescr'))
+                            sendEvent(name: 'alertSender', value: myGetData('alertSender'))
+                        }                        
 					}
 					myUpdData('alert', curAl + (myGetData('alertCnt') != sZERO ? ' +' + myGetData('alertCnt') : sBLK))
 					myUpdData('curAlSender', curAlSender)
@@ -1734,7 +1746,7 @@ void initMe() {
 	Boolean iconType = (settings.iconType ?: false)
 	myUpdData('iconType', iconType ? sTRU : sFLS)
 //	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
-	String iconLocation = (settings.iconLocation ?: 'https://tinyurl.com/icnqz/')
+	String iconLocation = (settings.iconLocation ?: 'https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/')
 	myUpdData(sICON, iconLocation)
 	state.OWM = '<a href="https://openweathermap.org" target="_blank">' + sIMGS5 + myGetData(sICON) + 'OWM.png style="height:2em"></a>'
 	setDateTimeFormats((String)settings.datetimeFormat)
