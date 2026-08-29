@@ -1,7 +1,7 @@
 /*
 	Weather-Display With OWM-Alerts Forecast Driver
 	Import URL: https://raw.githubusercontent.com/HubitatCommunity/Weather-Display-With-OWM-Alerts-Forecast-Driver/master/Weather-Display%20With%20OWM-Alerts%20Forecast%20Driver.groovy
-	Copyright 2026 @Matthew (Scottma61)
+	Copyright 2023 @Matthew (Scottma61)
 
 	This driver has morphed many, many times, so the genesis is very blurry now.  It stated as a WeatherUnderground
 	driver, then when they restricted their API it morphed into an APIXU driver.  When APIXU ceased it became a
@@ -22,13 +22,12 @@
 	- @storageanarchy for his Dark Sky Icon mapping and some new icons to compliment the Vclouds set.
 	- @nh.schottfam for lots of code clean up and optimizations.
 	- @bptworld for weather.gov poll error handling.
+        - Big update from @jshimota on the OpenWeatherMap data from his OpenWeatherMap Multi-API Weather Driver
 
 	In addition to all the cloned code from the Hubitat community, I have heavily modified/created new
 	code myself @Matthew (Scottma61) with lots of help from the Hubitat community.  If you believe you
 	should have been acknowledged or received attribution for a code contribution, I will happily do so.
 	While I compiled and orchestrated the driver, very little is actually original work of mine.
-
-        - Big update from @jshimota on the OpenWeatherMap data from his OpenWeatherMap Multi-API Weather Driver
 
 	This driver is free to use.  I do not accept donations. Please feel free to contribute to those
 	mentioned here if you like this work, as it would not have been possible without them.
@@ -60,9 +59,14 @@
 	on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 	for the specific language governing permissions and limitations under the License.
 
-	Last Update 08/28/2026
+	Last Update 08/29/2026
 { Left room below to document version changes...}
 
+	V0.7.1	08/28/2026	- LUTable converted from a linearly-scanned List<Map> (56 entries) to a Map<Integer,Map> keyed by condition id — icon/condition 						lookups (getImgName, getCondCode, the lux-estimation lookup) are now O(1) instead of O(n).
+						- Redundant string→BigDecimal re-parsing eliminated in generateTiles() and PostPoll() — values like pressure, wind, rainToday, 						forecast highs/lows, and precip amounts were being parsed from state two or more times per poll for the same tile/attribute build; each is 						now parsed once into a local variable and reused.
+						- Declined the "reduce state.* write volume" idea after realizing it doesn't hold up — PostPoll() is called independently from both 						the Weather-Display and OpenWeatherMap poll paths, and needs each other's most-recently-known data, so that write volume is 						legitimate, not waste.
+						- Fixed a tile icon vs. text mismatch: state.imgName0 (the icon myTile/threedayfcstTile actually display) was only ever set from the 						OpenWeatherMap poll — Weather-Display's own poll updated condition_text immediately but never touched the tile icon, so a tile could show 						a stale/forecast-derived icon (e.g. clouds) right next to fresh, accurate text (e.g. "Clear Night"). imgName0 now updates from 						- Weather-Display's own condition whenever WD polls, not just when OpenWeatherMap happens to poll.
+						- Fixed a related broken-image bug: the Weather-Display icon path was missing its base URL prefix entirely, so condition_icon, 						condition_iconWithText, and condition_icon_url would render as broken images whenever Weather-Display was the primary source. Now 						correctly prefixed with the configured icon location, matching the OpenWeatherMap path's behavior.
 	V0.7.0	08/28/2026	Code-style modernization pass to align with the community OpenWeatherMap Multi-API Weather Driver's
 						conventions, while retaining every existing attribute name and this driver's own
 						Weather-Display/OWM/NWS data-fetching logic. No existing attribute, preference, or dashboard
@@ -182,7 +186,7 @@ The way the 'optional' attributes work:
 //file:noinspection GroovyAssignabilityCheck
 //file:noinspection GrDeprecatedAPIUsage
 
-static String version()	{  return '0.7.0'  }
+static String version()	{  return '0.7.1'  }
 import groovy.transform.Field
 
 metadata {
@@ -491,6 +495,11 @@ void pollWDHandler(resp, data) {
 		if(wd.toString()==sNULL) {
 			pauseExecution(1000)
 			pollWD()
+			return
+		}
+		if(wd?.time?.time_date == null) {
+			logWarn('pollWDHandler: response from Weather-Display was missing time.time_date, skipping this poll: ' + wd.toString())
+			return
 		}
 		doPollWD(wd)		// parse the data returned by Weather-Display
 	}else{
@@ -600,11 +609,17 @@ void doPollWD(Map wd) {
 		updateLux(false)
 // <<<<<<<<<< Begin Icon processing >>>>>>>>>>
 		String imgName = getImgName((state.condition_id as String).toInteger(), state.is_day as String)
-		sendIfChangedPublish(name: 'condition_icon', value: sIMGS5 + imgName + '>')
-		sendIfChangedPublish(name: 'condition_iconWithText', value: sIMGS5 + imgName + '><br>' + state.condition_text)
-		sendIfChangedPublish(name: 'condition_icon_url', value: imgName)
-		state.condition_icon_url = imgName
-		sendIfChangedPublish(name: 'condition_icon_only', value: imgName.split('/')[-1].replaceFirst('\\?raw=true',sBLK))
+		String imgT1WD = ((state[sICON] as String).toLowerCase().contains('://github.com/') && (state[sICON] as String).toLowerCase().contains('/blob/master/')) ? '?raw=true' : sBLK
+		String fullImgUrlWD = state[sICON] + imgName + imgT1WD
+		sendIfChangedPublish(name: 'condition_icon', value: sIMGS5 + fullImgUrlWD + '>')
+		sendIfChangedPublish(name: 'condition_iconWithText', value: sIMGS5 + fullImgUrlWD + '><br>' + state.condition_text)
+		sendIfChangedPublish(name: 'condition_icon_url', value: fullImgUrlWD)
+		state.condition_icon_url = fullImgUrlWD
+		sendIfChangedPublish(name: 'condition_icon_only', value: fullImgUrlWD.split('/')[-1].replaceFirst('\\?raw=true',sBLK))
+		// imgName0 feeds myTile/threedayfcstTile - previously only ever set from the OWM poll, so tiles
+		// could show a stale/forecast-derived icon even when Weather-Display's own current-condition text
+		// (which IS updated here) had just changed. Keep it in sync with WD's own condition when WD polls.
+		state.imgName0 = sIMGS5 + fullImgUrlWD + sRB
 // >>>>>>>>>> End Icon Processing <<<<<<<<<<
 		String Summary_forecastTemp = '. '
 		String Summary_vis = sBLK
@@ -1246,11 +1261,12 @@ void PostPoll() {
 	String ddisp_r = state.ddisp_r==sNULL ? '%2.0f' : state.ddisp_r
 
 /*  Weather-Display Data Elements */
+	BigDecimal curPressureBD = myGetDataBD('pressure')
 	sendIfChanged(name: 'humidity', value: state.humidity==sNULL ? 0 : myGetDataBD('humidity'), unit: '%')
 	sendIfChanged(name: 'illuminance', value: state.illuminance==sNULL ? 5 : (state.illuminance as String).toInteger(), unit: 'lx')
-	sendIfChanged(name: 'pressure', value: state.pressure==sNULL ? 0 : Math.round(myGetDataBD('pressure') * mult_p) / mult_p, unit: state[sPMETR])
+	sendIfChanged(name: 'pressure', value: state.pressure==sNULL ? 0 : Math.round(curPressureBD * mult_p) / mult_p, unit: state[sPMETR])
     if(dashSharpToolsPublish || dashSmartTilesPublish) {
-        sendIfChanged(name: 'pressured', value: String.format(ddisp_p, myGetDataBD('pressure')), unit: state[sPMETR])
+        sendIfChanged(name: 'pressured', value: String.format(ddisp_p, curPressureBD), unit: state[sPMETR])
     }else{
 		device.deleteCurrentState('pressured')
 	}
@@ -1295,13 +1311,14 @@ void PostPoll() {
     }else{
         device.deleteCurrentState('weatherIcons')
 	}
+	BigDecimal curWindBD = myGetDataBD('wind')
 	if(dashHubitatOWMPublish || dashSharpToolsPublish || windPublish) {
-        sendIfChanged(name: 'wind', value: state.wind==sNULL ? 0 : Math.round(myGetDataBD('wind') * mult_twd) / mult_twd, unit: state[sDMETR])
+        sendIfChanged(name: 'wind', value: state.wind==sNULL ? 0 : Math.round(curWindBD * mult_twd) / mult_twd, unit: state[sDMETR])
     }else{
         device.deleteCurrentState('wind')
 	}
 	if(dashHubitatOWMPublish) {
-        sendIfChanged(name: 'windSpeed', value: state.wind==sNULL ? 0 : Math.round(myGetDataBD('wind') * mult_twd) / mult_twd, unit: state[sDMETR])
+        sendIfChanged(name: 'windSpeed', value: state.wind==sNULL ? 0 : Math.round(curWindBD * mult_twd) / mult_twd, unit: state[sDMETR])
     }else{
         device.deleteCurrentState('windSpeed')
 	}
@@ -1490,6 +1507,11 @@ private void generateTiles(String tmetr, String ddisp_twd, String ddisp_p, Strin
 	if(threedayTilePublish) {
 		Boolean gitclose = ((state[sICON] as String).toLowerCase().contains('://github.com/')) && ((state[sICON] as String).toLowerCase().contains('/blob/master/'))
 		String iconClose = (gitclose ? '?raw=true>' : sRB)
+		// Cache values read more than once in this block instead of re-parsing the same state string each time.
+		BigDecimal fHigh = myGetDataBD('forecastHigh'), fLow = myGetDataBD('forecastLow')
+		BigDecimal fHigh1 = myGetDataBD('forecastHigh1'), fLow1 = myGetDataBD('forecastLow1')
+		BigDecimal fHigh2 = myGetDataBD('forecastHigh2'), fLow2 = myGetDataBD('forecastLow2')
+		BigDecimal precip0 = myGetDataBD('Precip0'), precip1 = myGetDataBD('Precip1'), precip2 = myGetDataBD('Precip2')
 		String my3day
         my3day = '<style type="text/css">.cI{height:45%}.cIb{height:80%}</style>'
 		my3day += '<table style="text-align:center;display:inline">'
@@ -1510,20 +1532,20 @@ private void generateTiles(String tmetr, String ddisp_twd, String ddisp_p, Strin
 		my3day += sTR
 		if(state.threedayLH==sFLS){
 			my3day += 'Low High'
-			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastLow')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastHigh')) + tmetr
-			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastLow1')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastHigh1')) + tmetr
-			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastLow2')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastHigh2')) + tmetr
+			my3day += sTD + String.format(ddisp_twd, fLow) + tmetr + sSPC + String.format(ddisp_twd, fHigh) + tmetr
+			my3day += sTD + String.format(ddisp_twd, fLow1) + tmetr + sSPC + String.format(ddisp_twd, fHigh1) + tmetr
+			my3day += sTD + String.format(ddisp_twd, fLow2) + tmetr + sSPC + String.format(ddisp_twd, fHigh2) + tmetr
 		}else{
 			my3day += 'High Low'
-			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastHigh')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastLow')) + tmetr
-			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastHigh1')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastLow1')) + tmetr
-			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastHigh2')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastLow2')) + tmetr
+			my3day += sTD + String.format(ddisp_twd, fHigh) + tmetr + sSPC + String.format(ddisp_twd, fLow) + tmetr
+			my3day += sTD + String.format(ddisp_twd, fHigh1) + tmetr + sSPC + String.format(ddisp_twd, fLow1) + tmetr
+			my3day += sTD + String.format(ddisp_twd, fHigh2) + tmetr + sSPC + String.format(ddisp_twd, fLow2) + tmetr
 		}
 		my3day += sTR
 		my3day += 'PoP Precip'
-		my3day += sTD + state.PoP + '% ' + (myGetDataBD('Precip0') > 0 ? String.format(ddisp_r, myGetDataBD('Precip0')) + state[sRMETR] : 'None')
-		my3day += sTD + state.PoP1 + '% ' + (myGetDataBD('Precip1') > 0 ? String.format(ddisp_r, myGetDataBD('Precip1')) + state[sRMETR] : 'None')
-		my3day += sTD + state.PoP2 + '% ' + (myGetDataBD('Precip2') > 0 ? String.format(ddisp_r, myGetDataBD('Precip2')) + state[sRMETR] : 'None')
+		my3day += sTD + state.PoP + '% ' + (precip0 > 0 ? String.format(ddisp_r, precip0) + state[sRMETR] : 'None')
+		my3day += sTD + state.PoP1 + '% ' + (precip1 > 0 ? String.format(ddisp_r, precip1) + state[sRMETR] : 'None')
+		my3day += sTD + state.PoP2 + '% ' + (precip2 > 0 ? String.format(ddisp_r, precip2) + state[sRMETR] : 'None')
 		my3day += '<tr style="font-size:85%">' + '<td  colspan="4">'
 		my3day += '☀ ' + state.localSunrise + sSPC + '☽ ' + state.localSunset
 
@@ -1551,6 +1573,12 @@ private void generateTiles(String tmetr, String ddisp_twd, String ddisp_p, Strin
 		String alertStyleOpen = (noAlert ? sBLK : '<span>')
 		String alertStyleClose = (noAlert ? sBLK : sCSPAN)
 
+		// Cache values read more than once in this block instead of re-parsing the same state string each time.
+		BigDecimal curTemp = myGetDataBD(sTEMP)
+		BigDecimal curFeelsLike = myGetDataBD('feelsLike')
+		BigDecimal curWind = myGetDataBD('wind')
+		BigDecimal curPressure = myGetDataBD('pressure')
+		BigDecimal curRainToday = myGetDataBD('rainToday')
 		BigDecimal wgust
 		if(myGetDataBD('wind_gust') < 1.0 ) {
 			wgust = 0.0g
@@ -1561,19 +1589,19 @@ private void generateTiles(String tmetr, String ddisp_twd, String ddisp_p, Strin
 		mytext += '<table style="text-align:center;display:inline">'
 		mytext += sTR + '<B>' + state.city +'</B>'
 		mytext += sTR + state.condition_text + (noAlert ? sBLK : ' | ') + alertStyleOpen + (noAlert ? sBLK : state.alertLink) + alertStyleClose
-		mytext += sTR + String.format(ddisp_twd, myGetDataBD(sTEMP)) + tmetr  + state.imgName0
-		mytext += 'Feels like ' + String.format(ddisp_twd, myGetDataBD('feelsLike')) + tmetr
+		mytext += sTR + String.format(ddisp_twd, curTemp) + tmetr  + state.imgName0
+		mytext += 'Feels like ' + String.format(ddisp_twd, curFeelsLike) + tmetr
 		mytext += '<tr style="font-size:85%">' + sTD + '༄ ' + state.wind_direction + sSPC
-		mytext += (myGetDataBD('wind') < 1.0 ? 'calm' : '@ ' + String.format(ddisp_twd, myGetDataBD('wind')) + sSPC + state[sDMETR])
+		mytext += (curWind < 1.0 ? 'calm' : '@ ' + String.format(ddisp_twd, curWind) + sSPC + state[sDMETR])
 		mytext += ', gusts ' + ((wgust < 1.0) ? 'calm' :  '@ ' + String.format(ddisp_twd, wgust) + sSPC + state[sDMETR])
-		String mytexte = '<tr style="font-size:80%">' +sTD + '⏲ ' + String.format(ddisp_p, myGetDataBD('pressure')) + sSPC + state[sPMETR] + sSPC + '💦 '
-   		mytexte += state.humidity + '%' + sSPC + '☂ ' + state.percentPrecip + '%' + sSPC + '🪣 ' + (myGetDataBD('rainToday') > 0 ? String.format(ddisp_r, myGetDataBD('rainToday')) + sSPC + state[sRMETR] : 'None') + sBR
+		String mytexte = '<tr style="font-size:80%">' +sTD + '⏲ ' + String.format(ddisp_p, curPressure) + sSPC + state[sPMETR] + sSPC + '💦 '
+   		mytexte += state.humidity + '%' + sSPC + '☂ ' + state.percentPrecip + '%' + sSPC + '🪣 ' + (curRainToday > 0 ? String.format(ddisp_r, curRainToday) + sSPC + state[sRMETR] : 'None') + sBR
 		mytexte += '☀ ' + state.localSunrise + sSPC + '☽ ' + state.localSunset
 		if((mytext.length() + mytexte.length() + OWMIcon.length()+8) < 1025) {
 			mytext+= mytexte + OWMIcon
 		}else{
-			mytexte = '<tr style="font-size:80%">' + sTD + '<B>B:</B> ' + String.format(ddisp_p, myGetDataBD('pressure')) + sSPC + state[sPMETR] + sSPC + '<B>H:</B> '
-			mytexte += state.humidity + '%' + sSPC + '<B>PoP:</B> ' + state.percentPrecip + '%' + sSPC + '<B>Precip:</B> ' + (myGetDataBD('rainToday') > 0 ? String.format(ddisp_r, myGetDataBD('rainToday')) + sSPC + state[sRMETR] : 'None') + sBR
+			mytexte = '<tr style="font-size:80%">' + sTD + '<B>B:</B> ' + String.format(ddisp_p, curPressure) + sSPC + state[sPMETR] + sSPC + '<B>H:</B> '
+			mytexte += state.humidity + '%' + sSPC + '<B>PoP:</B> ' + state.percentPrecip + '%' + sSPC + '<B>Precip:</B> ' + (curRainToday > 0 ? String.format(ddisp_r, curRainToday) + sSPC + state[sRMETR] : 'None') + sBR
 			mytexte += '<B>SRise:</B> ' + state.localSunrise + sSPC + '<B>SSet:</B> ' + state.localSunset
 			mytext+= mytexte
 			if((mytext.length() + OWMIcon.length()+8) < 1025) {
@@ -2099,7 +2127,7 @@ def estimateLux(Integer condition_id, Integer cloud)	 {
 	Double cCF; cCF = (!cloud || cloud==sBLK) ? 0.998d : (1 - (cloud/100 / 3d))
     if(aFCC){
 		if(!cloud){
-			Map LUitem = LUTable.find{ Map it -> (Integer)it.id == condition_id }
+			Map LUitem = LUTable[condition_id]
 			if (LUitem)	{
 				cCF = LUitem.luxp
 				cCT = ' using estimated cloud cover based on condition.'
@@ -2164,13 +2192,13 @@ void SummaryMessage(Boolean SType, String Slast_poll_date, String Slast_poll_tim
 }
 
 String getImgName(Integer wCode, String iconTOD){
-	Map LUitem = LUTable.find{ (Integer)it.id == wCode }
+	Map LUitem = LUTable[wCode]
 	logDebug('getImgName Inputs: ' + wCode.toString() + ', ' + iconTOD + ';  Result: ' + (iconTOD==sTRU ? (LUitem ? (String)LUitem.Icd : sNPNG) : (LUitem ? (String)LUitem.Icn : sNPNG)))
 	return (iconTOD==sTRU ? (LUitem ? (String)LUitem.Icd : sNPNG) : (LUitem ? (String)LUitem.Icn : sNPNG))
 }
 
 String getCondCode(Integer cid, String iconTOD){
-	Map LUitem = LUTable.find{ (Integer)it.id == cid }
+	Map LUitem = LUTable[cid]
 	logDebug('getCondCode Inputs: ' + cid.toString() + ', ' + iconTOD + ';  Result: ' + (iconTOD==sTRU ? (LUitem ? (String)LUitem.sId : sNPNG) : (LUitem ? (String)LUitem.sIn : sNPNG)))
 	return (iconTOD==sTRU ? (LUitem ? (String)LUitem.sId : sNPNG) : (LUitem ? (String)LUitem.sIn : sNPNG))
 }
@@ -2488,63 +2516,63 @@ void clearAllSchedules() {
 	logInfo('All scheduled jobs have been successfully cleared.')
 }
 
-@Field final List<Map>	LUTable =	 [
-[id: 200, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 201, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 202, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 210, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 211, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 212, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 221, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 230, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 231, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 232, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 300, Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 301, Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 302, Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 310, Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 311, Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 312, Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 313, Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 314, Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 321, Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 500, Icd: s39, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 501, Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 502, Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 503, Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 504, Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 511, Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 520, Icd: s39, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 521, Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 522, Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 531, Icd: s39, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 600, Icd: '13.png', Icn: '46.png', luxp: 0.4, sId: 'flurries', sIn: 'nt_snow'],
-[id: 601, Icd: '14.png', Icn: '46.png', luxp: 0.3, sId: 'snow', sIn: 'nt_snow'],
-[id: 602, Icd: '16.png', Icn: '46.png', luxp: 0.3, sId: 'snow', sIn: 'nt_snow'],
-[id: 611, Icd: s9, Icn: '46.png', luxp: 0.5, sId: sRAIN, sIn: 'nt_snow'],
-[id: 612, Icd: '8.png', Icn: '46.png', luxp: 0.5, sId: 'sleet', sIn: 'nt_snow'],
-[id: 613, Icd: s9, Icn: '46.png', luxp: 0.5, sId: sRAIN, sIn: 'nt_snow'],
-[id: 615, Icd: s39, Icn: '45.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 616, Icd: s39, Icn: '45.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 620, Icd: '13.png', Icn: '46.png', luxp: 0.4, sId: 'flurries', sIn: 'nt_snow'],
-[id: 621, Icd: '16.png', Icn: '46.png', luxp: 0.3, sId: 'snow', sIn: 'nt_snow'],
-[id: 622, Icd: '42.png', Icn: '42.png', luxp: 0.6, sId: 'snow', sIn: 'nt_snow'],
-[id: 701, Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 711, Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 721, Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 731, Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 741, Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 751, Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 761, Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 762, Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 771, Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 781, Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 800, Icd: '32.png', Icn: '31.png', luxp: 1, sId: 'clear', sIn: 'nt_clear'],
-[id: 801, Icd: '34.png', Icn: '33.png', luxp: 0.9, sId: sPCLDY, sIn: sNPCLDY],
-[id: 802, Icd: '30.png', Icn: '29.png', luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 803, Icd: '28.png', Icn: '27.png', luxp: 0.6, sId: 'mostlycloudy', sIn: 'nt_mostlycloudy'],
-[id: 804, Icd: '26.png', Icn: '26.png', luxp: 0.6, sId: 'cloudy', sIn: 'nt_cloudy'],
-[id: 999, Icd: sNPNG, Icn: sNPNG, luxp: 1.0, sId: 'unknown', sIn: 'unknown'],
+@Field final Map<Integer,Map> LUTable = [
+200: [Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+201: [Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+202: [Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+210: [Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+211: [Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+212: [Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+221: [Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+230: [Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+231: [Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+232: [Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+300: [Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+301: [Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+302: [Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+310: [Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+311: [Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+312: [Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+313: [Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+314: [Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+321: [Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+500: [Icd: s39, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+501: [Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+502: [Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+503: [Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+504: [Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+511: [Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+520: [Icd: s39, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+521: [Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+522: [Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+531: [Icd: s39, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+600: [Icd: '13.png', Icn: '46.png', luxp: 0.4, sId: 'flurries', sIn: 'nt_snow'],
+601: [Icd: '14.png', Icn: '46.png', luxp: 0.3, sId: 'snow', sIn: 'nt_snow'],
+602: [Icd: '16.png', Icn: '46.png', luxp: 0.3, sId: 'snow', sIn: 'nt_snow'],
+611: [Icd: s9, Icn: '46.png', luxp: 0.5, sId: sRAIN, sIn: 'nt_snow'],
+612: [Icd: '8.png', Icn: '46.png', luxp: 0.5, sId: 'sleet', sIn: 'nt_snow'],
+613: [Icd: s9, Icn: '46.png', luxp: 0.5, sId: sRAIN, sIn: 'nt_snow'],
+615: [Icd: s39, Icn: '45.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+616: [Icd: s39, Icn: '45.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+620: [Icd: '13.png', Icn: '46.png', luxp: 0.4, sId: 'flurries', sIn: 'nt_snow'],
+621: [Icd: '16.png', Icn: '46.png', luxp: 0.3, sId: 'snow', sIn: 'nt_snow'],
+622: [Icd: '42.png', Icn: '42.png', luxp: 0.6, sId: 'snow', sIn: 'nt_snow'],
+701: [Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+711: [Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+721: [Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+731: [Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+741: [Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+751: [Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+761: [Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+762: [Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+771: [Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+781: [Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+800: [Icd: '32.png', Icn: '31.png', luxp: 1, sId: 'clear', sIn: 'nt_clear'],
+801: [Icd: '34.png', Icn: '33.png', luxp: 0.9, sId: sPCLDY, sIn: sNPCLDY],
+802: [Icd: '30.png', Icn: '29.png', luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+803: [Icd: '28.png', Icn: '27.png', luxp: 0.6, sId: 'mostlycloudy', sIn: 'nt_mostlycloudy'],
+804: [Icd: '26.png', Icn: '26.png', luxp: 0.6, sId: 'cloudy', sIn: 'nt_cloudy'],
+999: [Icd: sNPNG, Icn: sNPNG, luxp: 1.0, sId: 'unknown', sIn: 'unknown'],
 ]
 
 @Field final Map<String,Map> attributesMap = [
